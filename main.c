@@ -63,7 +63,7 @@ Osd_cfg_t g_arrstOsd_file[REGION_NUM] = { { TIMER_REGION, 0, 10, 10, 100, 1,
 
 Infrared_cfg_t g_stInfrad_file = { 0 };
 
-Net_cfg_t g_stNet_file = { 0, "192.168.1.105", "255.255.255.0", "192.168.1.1",
+Net_cfg_t g_stNet_file = { 0, "192.168.1.104", "255.255.255.0", "192.168.1.1",
 		0, "202.96.134.133", "202.96.134.133", { 0x00, 0x50, 0x80, 0x11, 0x22,
 				0x33 }, 0 };
 
@@ -167,7 +167,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int ret = 0;
 	int file_changed_flag = 0;
 	void *p_tmp;
-
+	p_tmp = (void*)&g_stAv_0_file;
 	int channel = -1;
 	int sub_channel = 0;
 	int video_chn_num = 2;
