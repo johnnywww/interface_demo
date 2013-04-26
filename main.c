@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -103,6 +103,31 @@ Sys_cfg_t g_stSyscfg_file = { 0, "0", "1.0.0.0", "2.0.0.0", "ipcam",
 
 Time_cfg_t g_stTimecfg_file = { 56, //HK
 		0, 0, "192.168.1.2", 60 };
+
+void getDateTimeStr(char* info, const int len, const time_t dtValue) {
+	struct tm* today = localtime(&dtValue);
+	strftime(info, len, "%Y-%m-%d %H:%M:%S ", today);
+}
+
+void getCurrentDateTimeStr(char* info, const int len) {
+	getDateTimeStr(info, len, time(NULL));
+}
+
+
+void logIntoFile(FILE* file, char* level, const char* fmt, va_list argptr) {
+	char value[500] = { 0 };
+	char dt[30];
+	getCurrentDateTimeStr(dt, 30);
+	vsnprintf(value, 500, fmt, argptr);
+	fprintf(file, "%s %s: %s\n", dt, level, value);
+}
+
+void logInfo(const char* fmt, ...) {
+	va_list argptr;
+	va_start(argptr, fmt);
+	logIntoFile(stdout, "NORMAL", fmt, argptr);
+	va_end(argptr);
+}
 
 int getPCLocalIp(char* pIp) {
 	int socket_fd;
@@ -255,7 +280,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	if (cmd_tmp == NULL) {
 		return -2;
 	}
-	printf("receive cmd is %s\n", buf);
+	logInfo("receive cmd is %s\n", buf);
 //fprintf(stdout, "enter process.\n");
 	do {
 		pKey = ParseVars(pInput, &parseIndex);
@@ -275,61 +300,61 @@ int processMsg(void *buf, int len, void *rbuf) {
 			cmd_type = atoi(pValue);
 			sprintf(cmd_tmp, "$%d=%d", e_TYPE, cmd_type);
 			strcpy(pRet, cmd_tmp);
-			printf("cmd type is %d\n", cmd_type);
+			logInfo("cmd type is %d\n", cmd_type);
 			break;
 		case e_Chn:
 			channel = atoi(pValue);
 			sprintf(cmd_tmp, "&%d=%d", e_Chn, channel);
 			strcat(pRet, cmd_tmp);
-			printf("channel is %d\n", channel);
+			logInfo("channel is %d\n", channel);
 			break;
 		case e_Sub_Chn:
 			sub_channel = atoi(pValue);
 			sprintf(cmd_tmp, "&%d=%d", e_Sub_Chn, sub_channel);
 			strcat(pRet, cmd_tmp);
-			printf("sub channel is %d\n", sub_channel);
+			logInfo("sub channel is %d\n", sub_channel);
 			break;
 		case e_video_addr:
 			if (cmd_type == T_Set) {
-				printf("set e_video_addr %s\n", pValue);
+				logInfo("set e_video_addr %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=rtsp://%s:%d", e_video_addr,
 						g_stNet_file.ip, g_stPort_file.rtspport + channel * 2);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_video_addr rtsp://%s:%d\n", g_stNet_file.ip,
+				logInfo("get e_video_addr rtsp://%s:%d\n", g_stNet_file.ip,
 						g_stPort_file.rtspport + channel * 2);
 			}
 			break;
 		case e_encode_profile:
 			if (cmd_type == T_Set) {
 				video_encode_profile = atoi(pValue);
-				printf("set e_encode_profile %d\n", video_encode_profile);
+				logInfo("set e_encode_profile %d\n", video_encode_profile);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_encode_profile,
 						video_encode_profile);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_encode_profile %d\n", video_encode_profile);
+				logInfo("get e_encode_profile %d\n", video_encode_profile);
 			}
 			break;
 		case e_video_chn_num:
 			if (cmd_type == T_Set) {
 				video_chn_num = atoi(pValue);
-				printf("set video channel counts %d\n", video_chn_num);
+				logInfo("set video channel counts %d\n", video_chn_num);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_video_chn_num, video_chn_num);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get video_chn_num %d\n", video_chn_num);
+				logInfo("get video_chn_num %d\n", video_chn_num);
 			}
 			break;
 		case e_FW:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set FW %d\n", iValue);
+				logInfo("set FW %d\n", iValue);
 				/*if(g_iFw!=iValue){
 				 g_iFw = iValue;
 				 init_isp_pw_frequency(iValue);
@@ -339,7 +364,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%d", e_FW, g_iFw);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("set FW %d\n", g_iFw);
+				logInfo("set FW %d\n", g_iFw);
 			}
 			break;
 		case e_denoise:
@@ -352,7 +377,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set denoise %d\n", iValue);
+				logInfo("set denoise %d\n", iValue);
 				/*if(((Av_cfg_t *)p_tmp)->denoise != iValue){
 				 ((Av_cfg_t *)p_tmp)->denoise = iValue;
 				 //............
@@ -363,7 +388,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->denoise);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get denoise %d\n", ((Av_cfg_t *) p_tmp)->denoise);
+				logInfo("get denoise %d\n", ((Av_cfg_t *) p_tmp)->denoise);
 			}
 			break;
 		case e_input_system:
@@ -376,7 +401,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set input_system %d\n", iValue);
+				logInfo("set input_system %d\n", iValue);
 
 				/*if(((Av_cfg_t *)p_tmp)->input_system != iValue){
 				 ((Av_cfg_t *)p_tmp)->input_system = iValue;
@@ -388,7 +413,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->input_system);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get input_system %d\n",
+				logInfo("get input_system %d\n",
 						((Av_cfg_t *) p_tmp)->input_system);
 
 			}
@@ -403,7 +428,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set de_interlace %d\n", iValue);
+				logInfo("set de_interlace %d\n", iValue);
 
 				/*if(((Av_cfg_t *)p_tmp)->de_interlace != iValue){
 				 ((Av_cfg_t *)p_tmp)->de_interlace = iValue;
@@ -415,7 +440,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->de_interlace);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get de_interlace %d\n",
+				logInfo("get de_interlace %d\n",
 						((Av_cfg_t *) p_tmp)->de_interlace);
 			}
 			break;
@@ -429,7 +454,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set Stream_enable %d\n", iValue);
+				logInfo("set Stream_enable %d\n", iValue);
 
 				/*if(((Av_cfg_t *)p_tmp)->ubs[sub_channel].stream_enable != iValue){
 				 ((Av_cfg_t *)p_tmp)->ubs[sub_channel].stream_enable = iValue;
@@ -441,7 +466,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].stream_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get Stream_enable %d\n",
+				logInfo("get Stream_enable %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].stream_enable);
 			}
 			break;
@@ -455,7 +480,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set enc_type %d\n", iValue);
+				logInfo("set enc_type %d\n", iValue);
 
 				/*if(((Av_cfg_t *)p_tmp)->ubs[sub_channel].enc_type != iValue){
 				 ((Av_cfg_t *)p_tmp)->ubs[sub_channel].enc_type = iValue;
@@ -467,7 +492,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].enc_type);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get enc_type %d\n",
+				logInfo("get enc_type %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].enc_type);
 			}
 			break;
@@ -481,7 +506,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set frame_rate %d\n", iValue);
+				logInfo("set frame_rate %d\n", iValue);
 
 				/*if(((Av_cfg_t *)p_tmp)->ubs[sub_channel].frame_rate != iValue){
 				 ((Av_cfg_t *)p_tmp)->ubs[sub_channel].frame_rate = iValue;
@@ -496,7 +521,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].frame_rate);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get frame_rate %d\n",
+				logInfo("get frame_rate %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].frame_rate);
 			}
 			break;
@@ -504,17 +529,17 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set bit_rate %d\n", iValue);
+				logInfo("set bit_rate %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_bit_rate,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
 				strcat(pRet, cmd_tmp);
 
-//				printf("=======to get bit_rate:%d.\n", ((Av_cfg_t *)p_tmp)->ubs[sub_channel].bit_rate/1000);
+//				logInfo("=======to get bit_rate:%d.\n", ((Av_cfg_t *)p_tmp)->ubs[sub_channel].bit_rate/1000);
 
 				ret++;
-				printf("get bit_rate %d\n",
+				logInfo("get bit_rate %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
 			}
 			break;
@@ -528,14 +553,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 			 }*/
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ip_interval %d\n", iValue);
+				logInfo("set e_ip_interval %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ip_interval,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].ip_interval);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ip_interval %d\n",
+				logInfo("get e_ip_interval %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].ip_interval);
 			}
 			break;
@@ -550,14 +575,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Set) {
 
 				iValue = atoi(pValue);
-				printf("set e_width %d\n", iValue);
+				logInfo("set e_width %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_width,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].width);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_width %d\n",
+				logInfo("get e_width %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].width);
 			}
 			break;
@@ -572,14 +597,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Set) {
 
 				iValue = atoi(pValue);
-				printf("set e_height %d\n", iValue);
+				logInfo("set e_height %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_height,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].height);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_height %d\n",
+				logInfo("get e_height %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].height);
 			}
 			break;
@@ -587,14 +612,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_rate_ctl_type %d\n", iValue);
+				logInfo("set e_rate_ctl_type %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_rate_ctl_type,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].rate_ctl_type);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_rate_ctl_type %d\n",
+				logInfo("get e_rate_ctl_type %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].rate_ctl_type);
 			}
 			break;
@@ -602,14 +627,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_target_rate_max %d\n", iValue);
+				logInfo("set e_target_rate_max %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_target_rate_max,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].target_rate_max);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_target_rate_max %d\n",
+				logInfo("get e_target_rate_max %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].target_rate_max);
 			}
 			break;
@@ -617,7 +642,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_reaction_delay_max %d\n", iValue);
+				logInfo("set e_reaction_delay_max %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(
@@ -637,14 +662,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_init_quant %d\n", iValue);
+				logInfo("set e_init_quant %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_init_quant,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].init_quant);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_init_quant %d\n",
+				logInfo("get e_init_quant %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].init_quant);
 			}
 			break;
@@ -652,14 +677,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_max_quant %d\n", iValue);
+				logInfo("set e_max_quant %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_max_quant,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].max_quant);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_max_quant %d\n",
+				logInfo("get e_max_quant %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].max_quant);
 			}
 			break;
@@ -667,14 +692,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_min_quant %d\n", iValue);
+				logInfo("set e_min_quant %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_min_quant,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].min_quant);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_min_quant %d\n",
+				logInfo("get e_min_quant %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].min_quant);
 			}
 			break;
@@ -682,14 +707,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_mjpeg_quality %d\n", iValue);
+				logInfo("set e_mjpeg_quality %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_mjpeg_quality,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].mjpeg_quality);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_mjpeg_quality %d\n",
+				logInfo("get e_mjpeg_quality %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].mjpeg_quality);
 			}
 			break;
@@ -697,14 +722,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_enable_roi %d\n", iValue);
+				logInfo("set e_enable_roi %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_enable_roi,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].enabled_roi);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_enable_roi %d\n",
+				logInfo("get e_enable_roi %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].enabled_roi);
 			}
 			break;
@@ -712,14 +737,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_roi_x %d\n", iValue);
+				logInfo("set e_roi_x %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_roi_x,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_x);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_roi_x %d\n",
+				logInfo("get e_roi_x %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_x);
 			}
 			break;
@@ -727,28 +752,28 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_roi_y %d\n", iValue);
+				logInfo("set e_roi_y %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_roi_y,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_y);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_roi_y %d\n",
+				logInfo("get e_roi_y %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_y);
 			}
 			break;
 		case e_roi_w:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_roi_w %d\n", iValue);
+				logInfo("set e_roi_w %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_roi_w,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_w);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_roi_w %d\n",
+				logInfo("get e_roi_w %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_w);
 			}
 			break;
@@ -756,14 +781,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_roi_h %d\n", iValue);
+				logInfo("set e_roi_h %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_roi_h,
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_h);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_roi_h %d\n",
+				logInfo("get e_roi_h %d\n",
 						((Av_cfg_t *) p_tmp)->ubs[sub_channel].roi_h);
 
 			}
@@ -771,265 +796,265 @@ int processMsg(void *buf, int len, void *rbuf) {
 		case e_brightness:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_brightness %d\n", iValue);
+				logInfo("set e_brightness %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_brightness,
 						g_stImg_file.brightness);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_brightness %d\n", g_stImg_file.brightness);
+				logInfo("get e_brightness %d\n", g_stImg_file.brightness);
 			}
 			break;
 		case e_saturation:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_saturation %d\n", iValue);
+				logInfo("set e_saturation %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_saturation,
 						g_stImg_file.saturation);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_saturation %d\n", g_stImg_file.saturation);
+				logInfo("get e_saturation %d\n", g_stImg_file.saturation);
 			}
 			break;
 		case e_contrast:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_contrast %d\n", iValue);
+				logInfo("set e_contrast %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_contrast, g_stImg_file.contrast);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_contrast %d\n", g_stImg_file.contrast);
+				logInfo("get e_contrast %d\n", g_stImg_file.contrast);
 			}
 			break;
 		case e_sharpness:
 			if (cmd_type == T_Set) {
 				sharpness = atoi(pValue);
-				printf("set e_sharpness %d\n", sharpness);
+				logInfo("set e_sharpness %d\n", sharpness);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_sharpness, sharpness);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sharpness %d\n", sharpness);
+				logInfo("get e_sharpness %d\n", sharpness);
 			}
 			break;
 		case e_hue:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_hue %d\n", iValue);
+				logInfo("set e_hue %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_hue, g_stImg_file.hue);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_hue %d\n", g_stImg_file.hue);
+				logInfo("get e_hue %d\n", g_stImg_file.hue);
 			}
 			break;
 		case e_scene:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_scene %d\n", iValue);
+				logInfo("set e_scene %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_scene, g_stImg_file.scene);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_scene %d\n", g_stImg_file.scene);
+				logInfo("get e_scene %d\n", g_stImg_file.scene);
 			}
 			break;
 		case e_flip: //޸Ϊֵ
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_flip %d\n", iValue);
+				logInfo("set e_flip %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_flip, g_stImg_file.flip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_flip %d\n", g_stImg_file.flip);
+				logInfo("get e_flip %d\n", g_stImg_file.flip);
 			}
 			break;
 		case e_mirror:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_mirror %d\n", iValue);
+				logInfo("set e_mirror %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_mirror, g_stImg_file.mirror);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_mirror %d\n", g_stImg_file.mirror);
+				logInfo("get e_mirror %d\n", g_stImg_file.mirror);
 			}
 			break;
 		case e_imgctow:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_imgctow %d\n", iValue);
+				logInfo("set e_imgctow %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_imgctow, g_stImg_file.imgctow[0]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_imgctow %d\n", g_stImg_file.imgctow[0]);
+				logInfo("get e_imgctow %d\n", g_stImg_file.imgctow[0]);
 
 			}
 			break;
 		case e_imgwtoc:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_imgwtoc %d\n", iValue);
+				logInfo("set e_imgwtoc %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_imgwtoc, g_stImg_file.imgctow[1]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_imgwtoc %d\n", g_stImg_file.imgctow[1]);
+				logInfo("get e_imgwtoc %d\n", g_stImg_file.imgctow[1]);
 			}
 			break;
 		case e_wb_r:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wb_r %d\n", iValue);
+				logInfo("set e_wb_r %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_r, g_stImg_file.wb[0]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_r %d\n", g_stImg_file.wb[0]);
+				logInfo("get e_wb_r %d\n", g_stImg_file.wb[0]);
 			}
 			break;
 		case e_wb_g:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wb_g %d\n", iValue);
+				logInfo("set e_wb_g %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_g, g_stImg_file.wb[1]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_g %d\n", g_stImg_file.wb[1]);
+				logInfo("get e_wb_g %d\n", g_stImg_file.wb[1]);
 			}
 			break;
 		case e_wb_b:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wb_b %d\n", iValue);
+				logInfo("set e_wb_b %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_b, g_stImg_file.wb[2]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_b %d\n", g_stImg_file.wb[2]);
+				logInfo("get e_wb_b %d\n", g_stImg_file.wb[2]);
 			}
 			break;
 		case e_wb_mode:
 			if (cmd_type == T_Set) {
 				wbMode = atoi(pValue);
-				printf("set e_wb_mode %d\n", wbMode);
+				logInfo("set e_wb_mode %d\n", wbMode);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_mode, wbMode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_mode %d\n", wbMode);
+				logInfo("get e_wb_mode %d\n", wbMode);
 			}
 			break;
 		case e_wb_crgain:
 			if (cmd_type == T_Set) {
 				wbcrgain = atoi(pValue);
-				printf("set e_wb_crgain %d\n", wbcrgain);
+				logInfo("set e_wb_crgain %d\n", wbcrgain);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_crgain, wbcrgain);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_crgain %d\n", wbcrgain);
+				logInfo("get e_wb_crgain %d\n", wbcrgain);
 			}
 			break;
 		case e_wb_cbgain:
 			if (cmd_type == T_Set) {
 				wbcbgain = atoi(pValue);
-				printf("set e_wb_cbgain %d\n", wbcbgain);
+				logInfo("set e_wb_cbgain %d\n", wbcbgain);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wb_cbgain, wbcbgain);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wb_cbgain %d\n", wbcbgain);
+				logInfo("get e_wb_cbgain %d\n", wbcbgain);
 			}
 			break;
 		case e_backlightcomp_mode:
 			if (cmd_type == T_Set) {
 				backlightcompMode = atoi(pValue);
-				printf("set e_backlightcomp_mode %d\n", backlightcompMode);
+				logInfo("set e_backlightcomp_mode %d\n", backlightcompMode);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_mode,
 						backlightcompMode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_backlightcomp_mode %d\n", backlightcompMode);
+				logInfo("get e_backlightcomp_mode %d\n", backlightcompMode);
 			}
 			break;
 		case e_backlightcomp_level:
 			if (cmd_type == T_Set) {
 				backlightcompLevel = atoi(pValue);
-				printf("set e_backlightcomp_level %d\n", backlightcompLevel);
+				logInfo("set e_backlightcomp_level %d\n", backlightcompLevel);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_level,
 						backlightcompLevel);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_backlightcomp_level %d\n", backlightcompLevel);
+				logInfo("get e_backlightcomp_level %d\n", backlightcompLevel);
 			}
 			break;
 		case e_wdrange_mode:
 			if (cmd_type == T_Set) {
 				wdrangeMode = atoi(pValue);
-				printf("set e_wdrange_mode %d\n", wdrangeMode);
+				logInfo("set e_wdrange_mode %d\n", wdrangeMode);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wdrange_mode, wdrangeMode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wdrange_mode %d\n", wdrangeMode);
+				logInfo("get e_wdrange_mode %d\n", wdrangeMode);
 			}
 			break;
 		case e_wdrange_level:
 			if (cmd_type == T_Set) {
 				wdrangeLevel = atoi(pValue);
-				printf("set e_wdrange_level %d\n", wdrangeLevel);
+				logInfo("set e_wdrange_level %d\n", wdrangeLevel);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wdrange_level, wdrangeLevel);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wdrange_level %d\n", wdrangeLevel);
+				logInfo("get e_wdrange_level %d\n", wdrangeLevel);
 			}
 			break;
 		case e_osd_region:
 			osd_region = atoi(pValue);
 			sprintf(cmd_tmp, "&%d=%d", e_osd_region, osd_region);
 			strcat(pRet, cmd_tmp);
-			printf("e_osd_region:%d\n", osd_region);
+			logInfo("e_osd_region:%d\n", osd_region);
 			break;
 		case e_osd_region_name:
 
 			if (cmd_type == T_Set) {
-				printf("set e_osd_region_name %s\n", pValue);
+				logInfo("set e_osd_region_name %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_osd_region_name,
 						g_arrstOsd_file[osd_region].name);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_region_name %s\n",
+				logInfo("get e_osd_region_name %s\n",
 						g_arrstOsd_file[osd_region].name);
 			}
 			break;
@@ -1037,14 +1062,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_osd_enable %d\n", iValue);
+				logInfo("set e_osd_enable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_osd_enable,
 						g_arrstOsd_file[osd_region].enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_enable %d\n",
+				logInfo("get e_osd_enable %d\n",
 						g_arrstOsd_file[osd_region].enable);
 			}
 			break;
@@ -1052,152 +1077,152 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_osd_x %d\n", iValue);
+				logInfo("set e_osd_x %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_osd_x,
 						g_arrstOsd_file[osd_region].x);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_x %d\n", g_arrstOsd_file[osd_region].x);
+				logInfo("get e_osd_x %d\n", g_arrstOsd_file[osd_region].x);
 			}
 			break;
 		case e_osd_y:
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_osd_y %d\n", iValue);
+				logInfo("set e_osd_y %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_osd_y,
 						g_arrstOsd_file[osd_region].y);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_y %d\n", g_arrstOsd_file[osd_region].y);
+				logInfo("get e_osd_y %d\n", g_arrstOsd_file[osd_region].y);
 			}
 			break;
 		case e_osd_w:
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_osd_w %d\n", iValue);
+				logInfo("set e_osd_w %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_osd_w,
 						g_arrstOsd_file[osd_region].w);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_w %d\n", g_arrstOsd_file[osd_region].w);
+				logInfo("get e_osd_w %d\n", g_arrstOsd_file[osd_region].w);
 			}
 			break;
 		case e_osd_h:
 
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_osd_h %d\n", iValue);
+				logInfo("set e_osd_h %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_osd_h,
 						g_arrstOsd_file[osd_region].h);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_osd_h %d\n", g_arrstOsd_file[osd_region].h);
+				logInfo("get e_osd_h %d\n", g_arrstOsd_file[osd_region].h);
 			}
 			break;
 		case e_infrad_stat:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_infrad_stat %d\n", iValue);
+				logInfo("set e_infrad_stat %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_infrad_stat, g_stInfrad_file.stat);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_infrad_stat %d\n", g_stInfrad_file.stat);
+				logInfo("get e_infrad_stat %d\n", g_stInfrad_file.stat);
 			}
 			break;
 		case e_net_dhcpflag:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_net_dhcpflag %d\n", iValue);
+				logInfo("set e_net_dhcpflag %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_net_dhcpflag,
 						g_stInfrad_file.stat);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_dhcpflag %d\n", g_stInfrad_file.stat);
+				logInfo("get e_net_dhcpflag %d\n", g_stInfrad_file.stat);
 			}
 			break;
 		case e_net_ip:
 			if (cmd_type == T_Set) {
-				printf("set e_net_ip %s\n", pValue);
+				logInfo("set e_net_ip %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_net_ip, g_stNet_file.ip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_ip %s\n", g_stNet_file.ip);
+				logInfo("get e_net_ip %s\n", g_stNet_file.ip);
 			}
 			break;
 		case e_net_netmask:
 			if (cmd_type == T_Set) {
-				printf("set e_net_netmask %s\n", pValue);
+				logInfo("set e_net_netmask %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_net_netmask, g_stNet_file.netmask);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_netmask %s\n", g_stNet_file.netmask);
+				logInfo("get e_net_netmask %s\n", g_stNet_file.netmask);
 			}
 			break;
 		case e_net_gateway:
 			if (cmd_type == T_Set) {
-				printf("set e_net_gateway %s\n", pValue);
+				logInfo("set e_net_gateway %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_net_gateway, g_stNet_file.gateway);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_gateway %s\n", g_stNet_file.gateway);
+				logInfo("get e_net_gateway %s\n", g_stNet_file.gateway);
 			}
 			break;
 		case e_net_dnsstat:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_net_dnsstat %d\n", iValue);
+				logInfo("set e_net_dnsstat %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_net_dnsstat, g_stNet_file.dnsstat);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_dnsstat %d\n", g_stNet_file.dnsstat);
+				logInfo("get e_net_dnsstat %d\n", g_stNet_file.dnsstat);
 			}
 			break;
 		case e_net_fdnsip:
 			if (cmd_type == T_Set) {
-				printf("set e_net_fdnsip %s\n", pValue);
+				logInfo("set e_net_fdnsip %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_net_fdnsip, g_stNet_file.fdnsip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_fdnsip %s\n", g_stNet_file.fdnsip);
+				logInfo("get e_net_fdnsip %s\n", g_stNet_file.fdnsip);
 			}
 			break;
 		case e_net_sdnsip:
 			if (cmd_type == T_Set) {
-				printf("set e_net_sdnsip %s\n", pValue);
+				logInfo("set e_net_sdnsip %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_net_sdnsip, g_stNet_file.sdnsip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_sdnsip %s\n", g_stNet_file.sdnsip);
+				logInfo("get e_net_sdnsip %s\n", g_stNet_file.sdnsip);
 			}
 			break;
 		case e_net_macaddr:
 			if (cmd_type == T_Set) {
-				printf("set e_net_macaddr %s\n", pValue);
+				logInfo("set e_net_macaddr %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				//net_get_hwaddr("eth0", g_stNet_file.macaddr);
@@ -1209,187 +1234,187 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stNet_file.macaddr[5]);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_macaddr %s\n", cmd_tmp);
+				logInfo("get e_net_macaddr %s\n", cmd_tmp);
 			}
 			break;
 		case e_net_nettype:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_net_nettype %d\n", iValue);
+				logInfo("set e_net_nettype %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_net_nettype, g_stNet_file.dnsstat);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_net_nettype %d\n", g_stNet_file.dnsstat);
+				logInfo("get e_net_nettype %d\n", g_stNet_file.dnsstat);
 			}
 			break;
 		case e_port_httpport:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_port_httpport %d\n", iValue);
+				logInfo("set e_port_httpport %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_port_httpport,
 						g_stPort_file.httpport);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_port_httpport %d\n", g_stPort_file.httpport);
+				logInfo("get e_port_httpport %d\n", g_stPort_file.httpport);
 			}
 			break;
 		case e_port_rtspport:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_port_rtspport %d\n", iValue);
+				logInfo("set e_port_rtspport %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_port_rtspport,
 						g_stPort_file.rtspport);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_port_rtspport %d\n", g_stPort_file.rtspport);
+				logInfo("get e_port_rtspport %d\n", g_stPort_file.rtspport);
 			}
 			break;
 		case e_upnp_upmenable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_upnp_upmenable %d\n", iValue);
+				logInfo("set e_upnp_upmenable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_upnp_upmenable,
 						g_stUpnp_file.upm_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_upnp_upmenable %d\n", g_stUpnp_file.upm_enable);
+				logInfo("get e_upnp_upmenable %d\n", g_stUpnp_file.upm_enable);
 			}
 			break;
 		case e_ddns_d3thenable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ddns_d3thenable %d\n", iValue);
+				logInfo("set e_ddns_d3thenable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ddns_d3thenable,
 						g_stDDNS_file.d3th_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ddns_d3thenable %d\n", g_stDDNS_file.d3th_enable);
+				logInfo("get e_ddns_d3thenable %d\n", g_stDDNS_file.d3th_enable);
 			}
 			break;
 		case e_ddns_d3thservice:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ddns_d3thservice %d\n", iValue);
+				logInfo("set e_ddns_d3thservice %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ddns_d3thservice,
 						g_stDDNS_file.d3th_service);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ddns_d3thservice %d\n",
+				logInfo("get e_ddns_d3thservice %d\n",
 						g_stDDNS_file.d3th_service);
 			}
 			break;
 		case e_ddns_d3thuname:
 			if (cmd_type == T_Set) {
-				printf("set e_ddns_d3thuname %s\n", pValue);
+				logInfo("set e_ddns_d3thuname %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ddns_d3thuname,
 						g_stDDNS_file.d3th_uname);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ddns_d3thuname %s\n", g_stDDNS_file.d3th_uname);
+				logInfo("get e_ddns_d3thuname %s\n", g_stDDNS_file.d3th_uname);
 			}
 			break;
 		case e_ddns_d3thpasswd:
 			if (cmd_type == T_Set) {
-				printf("set e_ddns_d3thpasswd %s\n", pValue);
+				logInfo("set e_ddns_d3thpasswd %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ddns_d3thpasswd,
 						g_stDDNS_file.d3th_passwd);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ddns_d3thpasswd %s\n", g_stDDNS_file.d3th_passwd);
+				logInfo("get e_ddns_d3thpasswd %s\n", g_stDDNS_file.d3th_passwd);
 			}
 			break;
 		case e_ddns_domain:
 			if (cmd_type == T_Set) {
-				printf("set e_ddns_domain %s\n", pValue);
+				logInfo("set e_ddns_domain %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ddns_domain,
 						g_stDDNS_file.d3th_domain);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ddns_domain %s\n", g_stDDNS_file.d3th_domain);
+				logInfo("get e_ddns_domain %s\n", g_stDDNS_file.d3th_domain);
 			}
 			break;
 		case e_wf_enable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wf_enable %d\n", iValue);
+				logInfo("set e_wf_enable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wf_enable,
 						g_stwfcfg_file.wf_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_enable %d\n", g_stwfcfg_file.wf_enable);
+				logInfo("get e_wf_enable %d\n", g_stwfcfg_file.wf_enable);
 			}
 			break;
 		case e_wf_ssid:
 			if (cmd_type == T_Set) {
-				printf("set e_wf_ssid %s\n", pValue);
+				logInfo("set e_wf_ssid %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_wf_ssid, g_stwfcfg_file.wf_ssid);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_ssid %s\n", g_stwfcfg_file.wf_ssid);
+				logInfo("get e_wf_ssid %s\n", g_stwfcfg_file.wf_ssid);
 			}
 			break;
 		case e_wf_auth:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wf_auth %d\n", iValue);
+				logInfo("set e_wf_auth %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wf_auth, g_stwfcfg_file.wf_auth);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_auth %d\n", g_stwfcfg_file.wf_auth);
+				logInfo("get e_wf_auth %d\n", g_stwfcfg_file.wf_auth);
 			}
 			break;
 		case e_wf_key:
 			if (cmd_type == T_Set) {
-				printf("set e_wf_key %s\n", pValue);
+				logInfo("set e_wf_key %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_wf_key, g_stwfcfg_file.wf_key);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_key %s\n", g_stwfcfg_file.wf_key);
+				logInfo("get e_wf_key %s\n", g_stwfcfg_file.wf_key);
 			}
 			break;
 		case e_wf_enc:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wf_enc %d\n", iValue);
+				logInfo("set e_wf_enc %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wf_enc, g_stwfcfg_file.wf_enc);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_enc %d\n", g_stwfcfg_file.wf_enc);
+				logInfo("get e_wf_enc %d\n", g_stwfcfg_file.wf_enc);
 			}
 			break;
 		case e_wf_mode:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_wf_mode %d\n", iValue);
+				logInfo("set e_wf_mode %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_wf_mode, g_stwfcfg_file.wf_mode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wf_mode %d\n", g_stwfcfg_file.wf_mode);
+				logInfo("get e_wf_mode %d\n", g_stwfcfg_file.wf_mode);
 			}
 			break;
 		case e_wfsearch_accesspoints:
@@ -1401,7 +1426,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%d", e_wfsearch_accesspoints, index);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_accesspoints %d\n", index);
+				logInfo("get e_wfsearch_accesspoints %d\n", index);
 			}
 			break;
 		case e_wfsearch_channel:
@@ -1410,7 +1435,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wchannel);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_channel %d\n",
+				logInfo("get e_wfsearch_channel %d\n",
 						g_stWf_search_file.search_Param[index].wchannel);
 			}
 			break;
@@ -1420,7 +1445,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wrssi);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_rssi %d\n",
+				logInfo("get e_wfsearch_rssi %d\n",
 						g_stWf_search_file.search_Param[index].wrssi);
 			}
 			break;
@@ -1430,7 +1455,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wessid);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_essid %d\n",
+				logInfo("get e_wfsearch_essid %d\n",
 						g_stWf_search_file.search_Param[index].wessid);
 			}
 			break;
@@ -1440,7 +1465,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wenc);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_enc %d\n",
+				logInfo("get e_wfsearch_enc %d\n",
 						g_stWf_search_file.search_Param[index].wenc);
 			}
 			break;
@@ -1450,7 +1475,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wauth);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_auth %d\n",
+				logInfo("get e_wfsearch_auth %d\n",
 						g_stWf_search_file.search_Param[index].wauth);
 			}
 			break;
@@ -1460,317 +1485,317 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stWf_search_file.search_Param[index].wnet);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_wfsearch_net %d\n",
+				logInfo("get e_wfsearch_net %d\n",
 						g_stWf_search_file.search_Param[index].wnet);
 			}
 			break;
 		case e_ptz_protocal:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_protocal %d\n", iValue);
+				logInfo("set e_ptz_protocal %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_protocal,
 						g_stPtzcfg_file.protocal);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_protocal %d\n", g_stPtzcfg_file.protocal);
+				logInfo("get e_ptz_protocal %d\n", g_stPtzcfg_file.protocal);
 			}
 			break;
 		case e_ptz_address:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_address %d\n", iValue);
+				logInfo("set e_ptz_address %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_address,
 						g_stPtzcfg_file.address);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_address %d\n", g_stPtzcfg_file.address);
+				logInfo("get e_ptz_address %d\n", g_stPtzcfg_file.address);
 			}
 			break;
 		case e_ptz_baud:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_baud %d\n", iValue);
+				logInfo("set e_ptz_baud %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_baud, g_stPtzcfg_file.baud);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_baud %d\n", g_stPtzcfg_file.baud);
+				logInfo("get e_ptz_baud %d\n", g_stPtzcfg_file.baud);
 			}
 			break;
 		case e_ptz_databit:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_databit %d\n", iValue);
+				logInfo("set e_ptz_databit %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_databit,
 						g_stPtzcfg_file.databit);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_databit %d\n", g_stPtzcfg_file.databit);
+				logInfo("get e_ptz_databit %d\n", g_stPtzcfg_file.databit);
 			}
 			break;
 		case e_ptz_stopbit:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_stopbit %d\n", iValue);
+				logInfo("set e_ptz_stopbit %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_stopbit,
 						g_stPtzcfg_file.stopbit);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_stopbit %d\n", g_stPtzcfg_file.stopbit);
+				logInfo("get e_ptz_stopbit %d\n", g_stPtzcfg_file.stopbit);
 			}
 			break;
 		case e_ptz_check:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ptz_check %d\n", iValue);
+				logInfo("set e_ptz_check %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_check, g_stPtzcfg_file.check);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ptz_check %d\n", g_stPtzcfg_file.check);
+				logInfo("get e_ptz_check %d\n", g_stPtzcfg_file.check);
 			}
 			break;
 		case e_md_io_alarm_enable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_io_alarm_enable %d\n", iValue);
+				logInfo("set e_md_io_alarm_enable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_io_alarm_enable,
 						g_stMdcfg_file.io_alarm_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_io_alarm_enable %d\n",
+				logInfo("get e_md_io_alarm_enable %d\n",
 						g_stMdcfg_file.io_alarm_enable);
 			}
 			break;
 		case e_md_io_alarm_flag:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_io_alarm_flag %d\n", iValue);
+				logInfo("set e_md_io_alarm_flag %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_io_alarm_flag,
 						g_stMdcfg_file.io_alarm_flag);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_io_alarm_flag %d\n",
+				logInfo("get e_md_io_alarm_flag %d\n",
 						g_stMdcfg_file.io_alarm_flag);
 			}
 			break;
 		case e_md_email_switch:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_email_switch %d\n", iValue);
+				logInfo("set e_md_email_switch %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_email_switch,
 						g_stMdcfg_file.email_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_email_switch %d\n",
+				logInfo("get e_md_email_switch %d\n",
 						g_stMdcfg_file.email_switch);
 			}
 			break;
 		case e_md_snap_switch:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_snap_switch %d\n", iValue);
+				logInfo("set e_md_snap_switch %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_snap_switch,
 						g_stMdcfg_file.snap_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_snap_switch %d\n", g_stMdcfg_file.snap_switch);
+				logInfo("get e_md_snap_switch %d\n", g_stMdcfg_file.snap_switch);
 			}
 			break;
 		case e_md_record_switch:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_record_switch %d\n", iValue);
+				logInfo("set e_md_record_switch %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_record_switch,
 						g_stMdcfg_file.record_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_record_switch %d\n",
+				logInfo("get e_md_record_switch %d\n",
 						g_stMdcfg_file.record_switch);
 			}
 			break;
 		case e_md_ftp_switch:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_ftp_switch %d\n", iValue);
+				logInfo("set e_md_ftp_switch %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_ftp_switch,
 						g_stMdcfg_file.ftp_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_ftp_switch %d\n", g_stMdcfg_file.ftp_switch);
+				logInfo("get e_md_ftp_switch %d\n", g_stMdcfg_file.ftp_switch);
 			}
 			break;
 		case e_md_relay_switch:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_relay_switch %d\n", iValue);
+				logInfo("set e_md_relay_switch %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_relay_switch,
 						g_stMdcfg_file.relay_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_relay_switch %d\n",
+				logInfo("get e_md_relay_switch %d\n",
 						g_stMdcfg_file.relay_switch);
 			}
 			break;
 		case e_md_relay_time:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_relay_time %d\n", iValue);
+				logInfo("set e_md_relay_time %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_relay_time,
 						g_stMdcfg_file.relay_time);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_relay_time %d\n", g_stMdcfg_file.relay_time);
+				logInfo("get e_md_relay_time %d\n", g_stMdcfg_file.relay_time);
 			}
 			break;
 		case e_md_schedule_type:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_type %d\n", iValue);
+				logInfo("set e_md_schedule_type %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_type,
 						g_stMdcfg_file.schedule.type);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_type %d\n",
+				logInfo("get e_md_schedule_type %d\n",
 						g_stMdcfg_file.schedule.type);
 			}
 			break;
 		case e_md_schedule_ename:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_ename %d\n", iValue);
+				logInfo("set e_md_schedule_ename %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_ename,
 						g_stMdcfg_file.schedule.ename);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_ename %d\n",
+				logInfo("get e_md_schedule_ename %d\n",
 						g_stMdcfg_file.schedule.ename);
 			}
 			break;
 		case e_md_schedule_etm:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_etm %d\n", iValue);
+				logInfo("set e_md_schedule_etm %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_etm,
 						g_stMdcfg_file.schedule.etm);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_etm %d\n",
+				logInfo("get e_md_schedule_etm %d\n",
 						g_stMdcfg_file.schedule.etm);
 			}
 			break;
 		case e_md_schedule_workday_Tend:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_workday_Tend %d\n", iValue);
+				logInfo("set e_md_schedule_workday_Tend %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_workday_Tend,
 						g_stMdcfg_file.schedule.stWorkday.t_end);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_workday_Tend %d\n",
+				logInfo("get e_md_schedule_workday_Tend %d\n",
 						g_stMdcfg_file.schedule.stWorkday.t_end);
 			}
 			break;
 		case e_md_schedule_workday_Tstart:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_workday_Tstart %d\n", iValue);
+				logInfo("set e_md_schedule_workday_Tstart %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_workday_Tstart,
 						g_stMdcfg_file.schedule.stWorkday.t_start);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_workday_Tstart %d\n",
+				logInfo("get e_md_schedule_workday_Tstart %d\n",
 						g_stMdcfg_file.schedule.stWorkday.t_start);
 			}
 			break;
 		case e_md_schedule_workend_Tstart:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_workend_Tstart %d\n", iValue);
+				logInfo("set e_md_schedule_workend_Tstart %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_workend_Tstart,
 						g_stMdcfg_file.schedule.stWeekend.t_start);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_workend_Tstart %d\n",
+				logInfo("get e_md_schedule_workend_Tstart %d\n",
 						g_stMdcfg_file.schedule.stWeekend.t_start);
 			}
 			break;
 		case e_md_schedule_workend_Tend:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_workend_Tend %d\n", iValue);
+				logInfo("set e_md_schedule_workend_Tend %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_workend_Tend,
 						g_stMdcfg_file.schedule.stWeekend.t_end);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_workend_Tend %d\n",
+				logInfo("get e_md_schedule_workend_Tend %d\n",
 						g_stMdcfg_file.schedule.stWeekend.t_end);
 			}
 			break;
 		case e_md_schedule_week_Tstart:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_week_Tstart %d\n", iValue);
+				logInfo("set e_md_schedule_week_Tstart %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_week_Tstart,
 						g_stMdcfg_file.schedule.astWeek[0].t_start);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_week_Tstart %d\n",
+				logInfo("get e_md_schedule_week_Tstart %d\n",
 						g_stMdcfg_file.schedule.astWeek[0].t_start);
 			}
 			break;
 		case e_md_schedule_week_Tend:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_schedule_week_Tend %d\n", iValue);
+				logInfo("set e_md_schedule_week_Tend %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_schedule_week_Tend,
 						g_stMdcfg_file.schedule.astWeek[0].t_end);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_schedule_week_Tend %d\n",
+				logInfo("get e_md_schedule_week_Tend %d\n",
 						g_stMdcfg_file.schedule.astWeek[0].t_end);
 			}
 			break;
@@ -1782,145 +1807,145 @@ int processMsg(void *buf, int len, void *rbuf) {
 			sprintf(cmd_tmp, "&%d=%d", e_md_area, index);
 			strcat(pRet, cmd_tmp);
 			ret++;
-			printf("e_md_area:%d\n", index);
+			logInfo("e_md_area:%d\n", index);
 			break;
 		case e_md_area_eable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_eable %d\n", iValue);
+				logInfo("set e_md_area_eable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_eable,
 						g_stMdcfg_file.area_param[index].enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_eable %d\n",
+				logInfo("get e_md_area_eable %d\n",
 						g_stMdcfg_file.area_param[index].enable);
 			}
 			break;
 		case e_md_area_s:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_s %d\n", iValue);
+				logInfo("set e_md_area_s %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_eable,
 						g_stMdcfg_file.area_param[index].s);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_s %d\n",
+				logInfo("get e_md_area_s %d\n",
 						g_stMdcfg_file.area_param[index].s);
 			}
 			break;
 		case e_md_area_method:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_method %d\n", iValue);
+				logInfo("set e_md_area_method %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_method,
 						g_stMdcfg_file.area_param[index].method);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_method %d\n",
+				logInfo("get e_md_area_method %d\n",
 						g_stMdcfg_file.area_param[index].method);
 			}
 			break;
 		case e_md_area_x:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_x %d\n", iValue);
+				logInfo("set e_md_area_x %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_x,
 						g_stMdcfg_file.area_param[index].x);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_x %d\n",
+				logInfo("get e_md_area_x %d\n",
 						g_stMdcfg_file.area_param[index].x);
 			}
 			break;
 		case e_md_area_y:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_y %d\n", iValue);
+				logInfo("set e_md_area_y %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_y,
 						g_stMdcfg_file.area_param[index].y);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_y %d\n",
+				logInfo("get e_md_area_y %d\n",
 						g_stMdcfg_file.area_param[index].y);
 			}
 			break;
 		case e_md_area_w:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_w %d\n", iValue);
+				logInfo("set e_md_area_w %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_y,
 						g_stMdcfg_file.area_param[index].w);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_w %d\n",
+				logInfo("get e_md_area_w %d\n",
 						g_stMdcfg_file.area_param[index].w);
 			}
 			break;
 		case e_md_area_h:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_md_area_h %d\n", iValue);
+				logInfo("set e_md_area_h %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_md_area_y,
 						g_stMdcfg_file.area_param[index].h);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_md_area_h %d\n",
+				logInfo("get e_md_area_h %d\n",
 						g_stMdcfg_file.area_param[index].h);
 			}
 			break;
 		case e_snapT_enable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_snapT_enable %d\n", iValue);
+				logInfo("set e_snapT_enable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_snapT_enable,
 						g_stSnaptimercfg_file.as_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_snapT_enable %d\n",
+				logInfo("get e_snapT_enable %d\n",
 						g_stSnaptimercfg_file.as_enable);
 			}
 			break;
 		case e_snapT_interval:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_snapT_interval %d\n", iValue);
+				logInfo("set e_snapT_interval %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_snapT_interval,
 						g_stSnaptimercfg_file.as_interval);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_snapT_interval %d\n",
+				logInfo("get e_snapT_interval %d\n",
 						g_stSnaptimercfg_file.as_interval);
 			}
 			break;
 		case e_snapT_type:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_snapT_type %d\n", iValue);
+				logInfo("set e_snapT_type %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_snapT_type,
 						g_stSnaptimercfg_file.as_type);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_snapT_type %d\n", g_stSnaptimercfg_file.as_type);
+				logInfo("get e_snapT_type %d\n", g_stSnaptimercfg_file.as_type);
 			}
 			break;
 		case e_user_number:
@@ -1929,13 +1954,13 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stUsr_file.user_num);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_user_number %d\n", g_stUsr_file.user_num);
+				logInfo("get e_user_number %d\n", g_stUsr_file.user_num);
 			}
 			break;
 		case e_user_opt_type:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_user_opt_type %d\n", iValue);
+				logInfo("set e_user_opt_type %d\n", iValue);
 				if (iValue < 0 || iValue > MODIFY_USER
 				)
 					break;
@@ -1946,17 +1971,17 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Set) {
 				switch (index) {
 				case ADD_USER:
-					printf("set e_user_name:add user\n");
+					logInfo("set e_user_name:add user\n");
 					break;
 				case DEL_USER:
-					printf("set e_user_name:delete user\n");
+					logInfo("set e_user_name:delete user\n");
 					break;
 				case MODIFY_USER:
-					printf("set e_user_name:modify user\n");
+					logInfo("set e_user_name:modify user\n");
 					break;
 				}
 			} else if (cmd_type == T_Get) {
-				printf("get user name \n");
+				logInfo("get user name \n");
 			}
 			index1 = i;
 			sprintf(cmd_tmp, "&%d=%s", e_user_name,
@@ -1966,7 +1991,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			break;
 		case e_user_password:
 			if (cmd_type == T_Set) {
-				printf("set e_user_password %s\n", pValue);
+				logInfo("set e_user_password %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 
@@ -1975,189 +2000,189 @@ int processMsg(void *buf, int len, void *rbuf) {
 		case e_user_group:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_user_group %d\n", iValue);
+				logInfo("set e_user_group %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 
 			}
 			break;
 		case e_ft_serverip:
 			if (cmd_type == T_Set) {
-				printf("set e_ft_serverip %s\n", pValue);
+				logInfo("set e_ft_serverip %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ft_serverip,
 						g_stFtcfg_file.serverip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_serverip %s\n", g_stFtcfg_file.serverip);
+				logInfo("get e_ft_serverip %s\n", g_stFtcfg_file.serverip);
 			}
 			break;
 		case e_ft_port:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ft_port %d\n", iValue);
+				logInfo("set e_ft_port %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ft_port, g_stFtcfg_file.port);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_port %d\n", g_stFtcfg_file.port);
+				logInfo("get e_ft_port %d\n", g_stFtcfg_file.port);
 			}
 			break;
 		case e_ft_username:
 			if (cmd_type == T_Set) {
-				printf("set e_ft_username %s\n", pValue);
+				logInfo("set e_ft_username %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ft_username,
 						g_stFtcfg_file.username);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_username %s\n", g_stFtcfg_file.username);
+				logInfo("get e_ft_username %s\n", g_stFtcfg_file.username);
 			}
 			break;
 		case e_ft_password:
 			if (cmd_type == T_Set) {
-				printf("set e_ft_password %s\n", pValue);
+				logInfo("set e_ft_password %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ft_password,
 						g_stFtcfg_file.password);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_password %s\n", g_stFtcfg_file.password);
+				logInfo("get e_ft_password %s\n", g_stFtcfg_file.password);
 			}
 			break;
 		case e_ft_mode:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_ft_mode %d\n", iValue);
+				logInfo("set e_ft_mode %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_ft_mode, g_stFtcfg_file.mode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_mode %d\n", g_stFtcfg_file.mode);
+				logInfo("get e_ft_mode %d\n", g_stFtcfg_file.mode);
 			}
 			break;
 		case e_ft_dirname:
 			if (cmd_type == T_Set) {
-				printf("set e_ft_dirname %s\n", pValue);
+				logInfo("set e_ft_dirname %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_ft_dirname,
 						g_stFtcfg_file.dirname);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_ft_dirname %s\n", g_stFtcfg_file.dirname);
+				logInfo("get e_ft_dirname %s\n", g_stFtcfg_file.dirname);
 			}
 			break;
 		case e_smtp_serverip:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_serverip %s\n", pValue);
+				logInfo("set e_smtp_serverip %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_serverip,
 						g_stSmtpcfg_file.serverip);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_serverip %s\n", g_stSmtpcfg_file.serverip);
+				logInfo("get e_smtp_serverip %s\n", g_stSmtpcfg_file.serverip);
 			}
 			break;
 		case e_smtp_port:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_smtp_port %d\n", iValue);
+				logInfo("set e_smtp_port %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_smtp_port, g_stSmtpcfg_file.port);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_port %d\n", g_stSmtpcfg_file.port);
+				logInfo("get e_smtp_port %d\n", g_stSmtpcfg_file.port);
 			}
 			break;
 		case e_smtp_sslflag:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_smtp_sslflag %d\n", iValue);
+				logInfo("set e_smtp_sslflag %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_smtp_sslflag,
 						g_stSmtpcfg_file.ssl_flag);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_sslflag %d\n", g_stSmtpcfg_file.ssl_flag);
+				logInfo("get e_smtp_sslflag %d\n", g_stSmtpcfg_file.ssl_flag);
 			}
 			break;
 		case e_smtp_logintype:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_smtp_logintype %d\n", iValue);
+				logInfo("set e_smtp_logintype %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_smtp_logintype,
 						g_stSmtpcfg_file.logintype);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_logintype %d\n", g_stSmtpcfg_file.logintype);
+				logInfo("get e_smtp_logintype %d\n", g_stSmtpcfg_file.logintype);
 			}
 			break;
 		case e_smtp_username:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_username %s\n", pValue);
+				logInfo("set e_smtp_username %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_username,
 						g_stSmtpcfg_file.username);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_username %s\n", g_stSmtpcfg_file.username);
+				logInfo("get e_smtp_username %s\n", g_stSmtpcfg_file.username);
 			}
 			break;
 		case e_smtp_password:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_password %s\n", pValue);
+				logInfo("set e_smtp_password %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_password,
 						g_stSmtpcfg_file.password);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_password %s\n", g_stSmtpcfg_file.password);
+				logInfo("get e_smtp_password %s\n", g_stSmtpcfg_file.password);
 			}
 			break;
 		case e_smtp_from:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_from %s\n", pValue);
+				logInfo("set e_smtp_from %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_from, g_stSmtpcfg_file.from);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_from %s\n", g_stSmtpcfg_file.from);
+				logInfo("get e_smtp_from %s\n", g_stSmtpcfg_file.from);
 			}
 			break;
 		case e_smtp_to:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_to %s\n", pValue);
+				logInfo("set e_smtp_to %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_to, g_stSmtpcfg_file.to);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_to %s\n", g_stSmtpcfg_file.to);
+				logInfo("get e_smtp_to %s\n", g_stSmtpcfg_file.to);
 			}
 			break;
 		case e_smtp_subject:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_subject %s\n", pValue);
+				logInfo("set e_smtp_subject %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_subject,
 						g_stSmtpcfg_file.subject);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_subject %s\n", g_stSmtpcfg_file.subject);
+				logInfo("get e_smtp_subject %s\n", g_stSmtpcfg_file.subject);
 			}
 			break;
 		case e_smtp_text:
 			if (cmd_type == T_Set) {
-				printf("set e_smtp_text %s\n", pValue);
+				logInfo("set e_smtp_text %s\n", pValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_smtp_text, g_stSmtpcfg_file.text);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_smtp_text %s\n", g_stSmtpcfg_file.text);
+				logInfo("get e_smtp_text %s\n", g_stSmtpcfg_file.text);
 			}
 			break;
 		case e_vdmask_number:
@@ -2166,173 +2191,173 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stVidMaskcfg_file.aeraNum);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_number %d\n", g_stVidMaskcfg_file.aeraNum);
+				logInfo("get e_vdmask_number %d\n", g_stVidMaskcfg_file.aeraNum);
 			}
 			break;
 		case e_vdmask_NO:
 //			if(cmd_type==T_Set){
 			iValue = atoi(pValue);
 			index = iValue;
-			printf("e_vdmask_NO:%d\n", index);
+			logInfo("e_vdmask_NO:%d\n", index);
 //			}
 			break;
 		case e_vdmask_enable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_enable %d\n", iValue);
+				logInfo("set e_vdmask_enable %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_enable,
 						g_stVidMaskcfg_file.aera[index].enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_enable %d\n",
+				logInfo("get e_vdmask_enable %d\n",
 						g_stVidMaskcfg_file.aera[index].enable);
 			}
 			break;
 		case e_vdmask_x:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_x %d\n", iValue);
+				logInfo("set e_vdmask_x %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_x,
 						g_stVidMaskcfg_file.aera[index].x);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_x %d\n",
+				logInfo("get e_vdmask_x %d\n",
 						g_stVidMaskcfg_file.aera[index].x);
 			}
 			break;
 		case e_vdmask_y:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_y %d\n", iValue);
+				logInfo("set e_vdmask_y %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_y,
 						g_stVidMaskcfg_file.aera[index].y);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_y %d\n",
+				logInfo("get e_vdmask_y %d\n",
 						g_stVidMaskcfg_file.aera[index].y);
 			}
 			break;
 		case e_vdmask_w:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_w %d\n", iValue);
+				logInfo("set e_vdmask_w %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_w,
 						g_stVidMaskcfg_file.aera[index].w);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_w %d\n",
+				logInfo("get e_vdmask_w %d\n",
 						g_stVidMaskcfg_file.aera[index].w);
 			}
 			break;
 		case e_vdmask_h:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_h %d\n", iValue);
+				logInfo("set e_vdmask_h %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_h,
 						g_stVidMaskcfg_file.aera[index].h);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_h %d\n",
+				logInfo("get e_vdmask_h %d\n",
 						g_stVidMaskcfg_file.aera[index].h);
 			}
 			break;
 		case e_vdmask_color:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_vdmask_color %d\n", iValue);
+				logInfo("set e_vdmask_color %d\n", iValue);
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_vdmask_color,
 						g_stVidMaskcfg_file.aera[index].color);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_vdmask_color %d\n",
+				logInfo("get e_vdmask_color %d\n",
 						g_stVidMaskcfg_file.aera[index].color);
 			}
 			break;
 		case e_time_Zone:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_time_Zone %d\n", iValue);
+				logInfo("set e_time_Zone %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_time_Zone,
 						g_stTimecfg_file.timeZone);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_Zone %d\n", g_stTimecfg_file.timeZone);
+				logInfo("get e_time_Zone %d\n", g_stTimecfg_file.timeZone);
 			}
 			break;
 		case e_time_dstmode:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_time_dstmode %d\n", iValue);
+				logInfo("set e_time_dstmode %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_time_dstmode,
 						g_stTimecfg_file.dstmode);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_dstmode %d\n", g_stTimecfg_file.dstmode);
+				logInfo("get e_time_dstmode %d\n", g_stTimecfg_file.dstmode);
 			}
 			break;
 		case e_time_ntpenable:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_time_ntpenable %d\n", iValue);
+				logInfo("set e_time_ntpenable %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_time_ntpenable,
 						g_stTimecfg_file.ntpenable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_ntpenable %d\n", g_stTimecfg_file.ntpenable);
+				logInfo("get e_time_ntpenable %d\n", g_stTimecfg_file.ntpenable);
 			}
 			break;
 		case e_time_ntpserver:
 			if (cmd_type == T_Set) {
-				printf("set e_time_ntpserver %s\n", pValue);
+				logInfo("set e_time_ntpserver %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_time_ntpserver,
 						g_stTimecfg_file.ntpserver);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_ntpserver %s\n", g_stTimecfg_file.ntpserver);
+				logInfo("get e_time_ntpserver %s\n", g_stTimecfg_file.ntpserver);
 			}
 			break;
 		case e_time_ntpinterval:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_time_ntpinterval %d\n", iValue);
+				logInfo("set e_time_ntpinterval %d\n", iValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_time_ntpinterval,
 						g_stTimecfg_file.ntpinterval);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_ntpinterval %d\n",
+				logInfo("get e_time_ntpinterval %d\n",
 						g_stTimecfg_file.ntpinterval);
 			}
 			break;
 		case e_time_systime:
 			if (cmd_type == T_Set) {
-				printf("set e_time_systime %s\n", pValue);
+				logInfo("set e_time_systime %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%s", e_time_systime,
 						g_stTimecfg_file.sys_time);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_time_systime %s\n", g_stTimecfg_file.sys_time);
+				logInfo("get e_time_systime %s\n", g_stTimecfg_file.sys_time);
 			}
 			break;
 		case e_sys_devtype:
@@ -2346,7 +2371,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.devtype); //0:720p 1:1080p
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_devtype %d\n", g_stSyscfg_file.devtype);
+				logInfo("get e_sys_devtype %d\n", g_stSyscfg_file.devtype);
 			}
 			break;
 		case e_sys_model:
@@ -2354,7 +2379,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%s", e_sys_model, g_stSyscfg_file.model);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_model %s\n", g_stSyscfg_file.model);
+				logInfo("get e_sys_model %s\n", g_stSyscfg_file.model);
 			}
 			break;
 		case e_sys_hdversion:
@@ -2363,7 +2388,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.hardVersion);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_hdversion %s\n", g_stSyscfg_file.hardVersion);
+				logInfo("get e_sys_hdversion %s\n", g_stSyscfg_file.hardVersion);
 			}
 			break;
 		case e_sys_swversion:
@@ -2372,7 +2397,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.softVersion);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_swversion %s\n", g_stSyscfg_file.softVersion);
+				logInfo("get e_sys_swversion %s\n", g_stSyscfg_file.softVersion);
 			}
 			break;
 		case e_sys_devname:
@@ -2380,7 +2405,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%s", e_sys_devname, g_stSyscfg_file.name);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_devname %s\n", g_stSyscfg_file.name);
+				logInfo("get e_sys_devname %s\n", g_stSyscfg_file.name);
 			}
 			break;
 		case e_sys_startdate:
@@ -2389,16 +2414,16 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.startdate);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_startdate %s\n", g_stSyscfg_file.startdate);
+				logInfo("get e_sys_startdate %s\n", g_stSyscfg_file.startdate);
 			}
 			break;
 		case e_sys_runtimes:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%s", e_sys_runtimes,
+				sprintf(cmd_tmp, "&%d=%d", e_sys_runtimes,
 						g_stSyscfg_file.runtimes);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_runtimes %s\n", g_stSyscfg_file.runtimes);
+				logInfo("get e_sys_runtimes %s\n", g_stSyscfg_file.runtimes);
 			}
 			break;
 		case e_sys_sdstatus:
@@ -2407,7 +2432,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.sdstatus);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_sdstatus %d\n", g_stSyscfg_file.sdstatus);
+				logInfo("get e_sys_sdstatus %d\n", g_stSyscfg_file.sdstatus);
 			}
 			break;
 		case e_sys_sdfreespace:
@@ -2416,7 +2441,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.sdfreespace);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_sdfreespace %d\n",
+				logInfo("get e_sys_sdfreespace %d\n",
 						g_stSyscfg_file.sdfreespace);
 			}
 			break;
@@ -2426,20 +2451,20 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.sdtotalspace);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_sys_sdtotalspace %d\n",
+				logInfo("get e_sys_sdtotalspace %d\n",
 						g_stSyscfg_file.sdtotalspace);
 			}
 			break;
 		case e_nvr_opt:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
-				printf("set e_nvr_opt %d\n", iValue);
+				logInfo("set e_nvr_opt %d\n", iValue);
 			}
 			break;
 		case e_nvr_forIDR:
 			if (cmd_type == T_Set) {
 				//set_IDR_BR(channel, sub_channel);
-				printf("set e_nvr_forIDR\n");
+				logInfo("set e_nvr_forIDR\n");
 			}
 			break;
 		case e_nvr_clientID:
@@ -2448,7 +2473,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%d", e_nvr_clientID, iValue);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_nvr_clientID %d\n", iValue);
+				logInfo("get e_nvr_clientID %d\n", iValue);
 			}
 			break;
 		case e_enc_resolution:
@@ -2462,19 +2487,19 @@ int processMsg(void *buf, int len, void *rbuf) {
 				sprintf(cmd_tmp, "&%d=%d", e_enc_resolution, iValue);
 				strcat(pRet, cmd_tmp);
 
-//				printf("==============to get resolution: %d.\n", iValue);
+//				logInfo("==============to get resolution: %d.\n", iValue);
 
 				ret++;
-				printf("get e_enc_resolution %d\n", iValue);
+				logInfo("get e_enc_resolution %d\n", iValue);
 			} else {
 				iValue = atoi(pValue);
-				printf("set e_enc_resolution %d\n", iValue);
+				logInfo("set e_enc_resolution %d\n", iValue);
 			}
 			break;
 
 		case e_reset:
 			if (cmd_type == T_Set) {
-				printf("set e_reset \n");
+				logInfo("set e_reset \n");
 			}
 			break;
 
@@ -2506,7 +2531,7 @@ int main(int argc, char *argv[]) {
 	init();
 	server_fd = create_server(UN_AVSERVER_DOMAIN);
 	if (server_fd < 0) {
-		printf("interface_demo: error create server_fd.\n");
+		logInfo("interface_demo: error create server_fd.\n");
 		return 1;
 	}
 
@@ -2529,7 +2554,7 @@ int main(int argc, char *argv[]) {
 
 	sleep(1);
 
-	printf("start...\n");
+	logInfo("start...\n");
 	while (1) {
 		FD_ZERO(&readfset);
 		FD_SET(server_fd, &readfset);
@@ -2541,14 +2566,14 @@ int main(int argc, char *argv[]) {
 					(max_socket_fd < client_fd) ? (client_fd) : (max_socket_fd);
 		}
 
-		printf("select start...max_socket_fd=%d\n", max_socket_fd);
+		logInfo("select start...max_socket_fd=%d\n", max_socket_fd);
 
 		ret = select(max_socket_fd + 1, &readfset, NULL, NULL, NULL);
 		if (ret <= 0) {
 			continue;
 		}
 		if (FD_ISSET(server_fd, &readfset)) {
-			printf("client comming.\n");
+			logInfo("client comming.\n");
 			len = sizeof(client_addr);
 			client_fd = accept(server_fd, (struct sockaddr*) &client_addr,
 					&len);
