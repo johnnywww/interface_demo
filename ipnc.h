@@ -148,26 +148,6 @@ typedef struct st_update_bs {
         int roi_h;          ///< roi height
 } update_avbs_t;
 
-void init_update_avbs_t(update_avbs_t* tmp)
-{
-    tmp->bit_rate = 2;
-    tmp->enabled_roi = 1;
-    tmp->enc_type = 1;
-    tmp->frame_rate = 10;
-    tmp->height = 100;
-    tmp->init_quant = 20;
-    tmp->ip_interval = 10;
-    tmp->max_quant = tmp->mjpeg_quality = 20;
-    tmp->min_quant = 10;
-    tmp->rate_ctl_type = 1;
-    tmp->reaction_delay_max = 20;
-    tmp->roi_h = tmp->roi_w = 100;
-    tmp->roi_x = tmp->roi_y = 0;
-    tmp->stream_enable = 1;
-    tmp->target_rate_max = 10;
-    tmp->width = 100;
-}
-
 typedef struct _tagAv_cfg{
         /* per channel data */
         int						denoise;  /* 3D-denoise */
@@ -178,15 +158,6 @@ typedef struct _tagAv_cfg{
         int						chn;	//MAIN_STREAM_CHN:	SUB_STREAM_CHN
         update_avbs_t			ubs[MAX_UPDATE_SUB_CHN];
 }Av_cfg_t;
-void init_Av_cfg_t(Av_cfg_t* tmp)
-{
-    tmp->denoise = 1;
-    tmp->chn = 1;
-    tmp->de_interlace = 10;
-    tmp->input_system = 2;
-    init_update_avbs_t(&tmp->ubs[0]);
-    init_update_avbs_t(&tmp->ubs[1]);
-}
 
 typedef struct _tagImg_cfg{
         int		brightness;	//
@@ -361,12 +332,12 @@ typedef struct _tagSchedule_time{
 }_Sche_time_t;
 
 typedef struct _tagMD_schedule{
-        int			type;	//1:eventÂ¼
-        int			ename;	//1mdÆ¶â±¨
-        int			etm;	//0:Ä£Ê½1:Ï¢Ä£Ê½ 2:Ê±Ä£Ê½
-        _Sche_time_t	stWorkday;//Õ²Ê±
-        _Sche_time_t	stWeekend;//Ï¢Õ²Ê±
-        _Sche_time_t	astWeek[7];//Ò»Õ²Ê±
+	int			type;	//1:eventÊÂ¼ş
+	int			ename;	//1£ºmdÒÆ¶¯Õì²â±¨¾¯
+	int			etm;	//0:ÕûÖÜÄ£Ê½£¬1:¹¤×÷ÈÕĞİÏ¢ÈÕÄ£Ê½ 2:ËùÓĞÊ±¼äÄ£Ê½
+	_Sche_time_t	stWorkday;//¹¤×÷ÈÕ²¼·ÀÊ±¼ä¶Î
+	_Sche_time_t	stWeekend;//ĞİÏ¢ÈÕ²¼·ÀÊ±¼ä¶Î
+	_Sche_time_t	astWeek[7];//ÖÜÒ»ÖÁÖÜÈÕ²¼·ÀÊ±¼ä¶Î
 }_MD_schedule_t;
 
 typedef struct _tagMd_cfg{
@@ -459,16 +430,16 @@ typedef struct _tagTime_cfg{
 
 #define DEVTYPE_ALL_NUM		2
 typedef struct _tagSys_cfg{
-        char		devtype;	//è±¸
-        char		model[16];//è±¸Ğº
-        char		hardVersion[16];//Ó²æ±¾
-        char		softVersion[16];//æ±¾
-        char		name[16];	//è±¸
-        char		startdate[32];	//ÏµÍ³Ê¼Ê±
-        int			runtimes;	//Ö¶
-        int			sdstatus;	//SD×´Ì¬
-        int			sdfreespace;	//SDÊ£Ã¿Õ¼ä£¬Î»KB
-        int			sdtotalspace;	//SDÎ»KB
+	char		devtype;	//Éè±¸ÀàĞÍ
+	char		model[16];//Éè±¸ĞòÁĞºÅ
+	char		hardVersion[16];//Ó²¼ş°æ±¾ºÅ
+	char		softVersion[16];//Èí¼ş°æ±¾ºÅ
+	char		name[16];	//Éè±¸Ãû³Æ
+	char		startdate[32];	//ÏµÍ³¿ªÊ¼ÔËĞĞÊ±¼ä
+	int			runtimes;	//±£Áô×Ö¶Î
+	int			sdstatus;	//SD¿¨×´Ì¬
+	int			sdfreespace;	//SD¿¨Ê£Óà¿ÉÓÃ¿Õ¼ä£¬µ¥Î»KB
+	int			sdtotalspace;	//SD¿¨×ÜÈİÁ¿£¬µ¥Î»KB
 }Sys_cfg_t;
 
 

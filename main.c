@@ -14,12 +14,14 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <arpa/inet.h>
+#include <linux/if.h>
+#include <linux/sockios.h>
 #include "cmd_type.h"
 #include "interface.h"
 #include "ipnc.h"
 
 #if 1
-
+#define ETH_NAME "eth0"
 //int g_iFw;
 Av_cfg_t g_stAv_0_file;
 Av_cfg_t g_stAv_1_file;
@@ -42,11 +44,6 @@ Ptz_ctrl_t g_stPtzctl_file;
 //VidMask_cfg_t g_stVidMaskcfg_file;
 //Time_cfg_t g_stTimecfg_file;
 //Sys_cfg_t g_stSyscfg_file;
-void init() {
-	init_Av_cfg_t(&g_stAv_0_file);
-	init_Av_cfg_t(&g_stAv_1_file);
-	init_Wf_search(&g_stWf_search_file);
-}
 
 User_file_t g_stUsr_file = { 3, { { "admin", "admin", em_Usergroup_admin }, {
 		"user", "user", em_Usergroup_user }, { "guest", "guest",
@@ -63,9 +60,9 @@ Osd_cfg_t g_arrstOsd_file[REGION_NUM] = { { TIMER_REGION, 0, 10, 10, 100, 1,
 
 Infrared_cfg_t g_stInfrad_file = { 0 };
 
-Net_cfg_t g_stNet_file = { 0, "192.168.1.104", "255.255.255.0", "192.168.1.1",
-		0, "202.96.134.133", "202.96.134.133", { 0x00, 0x50, 0x80, 0x11, 0x22,
-				0x33 }, 0 };
+Net_cfg_t g_stNet_file = { 0, "192.168.1.21", "255.255.255.0", "192.168.1.1", 0,
+		"202.96.134.133", "202.96.134.133",
+		{ 0x00, 0x50, 0x80, 0x11, 0x22, 0x33 }, 0 };
 
 Port_cfg_t g_stPort_file = { 8001, 554 };
 
@@ -106,6 +103,66 @@ Sys_cfg_t g_stSyscfg_file = { 0, "0", "1.0.0.0", "2.0.0.0", "ipcam",
 
 Time_cfg_t g_stTimecfg_file = { 56, //HK
 		0, 0, "192.168.1.2", 60 };
+
+int getPCLocalIp(char* pIp) {
+	int socket_fd;
+	struct sockaddr_in *sin;
+	struct ifreq ifr;
+	struct ifconf conf;
+	int num;
+	int i;
+	socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (socket_fd == -1) {
+		return -1;
+	}
+	strcpy(ifr.ifr_name, ETH_NAME);
+	if (ioctl(socket_fd, SIOCGIFADDR, &ifr) < 0) {
+		return -1;
+	}
+	else
+	{
+		sin = (struct sockaddr_in *)&(ifr.ifr_addr);
+		strcpy(pIp, inet_ntoa(sin->sin_addr));
+	}
+	return 0;
+}
+
+void init_update_avbs_t(update_avbs_t* tmp)
+{
+    tmp->bit_rate = 2;
+    tmp->enabled_roi = 1;
+    tmp->enc_type = 0;
+    tmp->frame_rate = 10;
+    tmp->height = 100;
+    tmp->init_quant = 20;
+    tmp->ip_interval = 10;
+    tmp->max_quant = tmp->mjpeg_quality = 20;
+    tmp->min_quant = 10;
+    tmp->rate_ctl_type = 1;
+    tmp->reaction_delay_max = 20;
+    tmp->roi_h = tmp->roi_w = 100;
+    tmp->roi_x = tmp->roi_y = 0;
+    tmp->stream_enable = 1;
+    tmp->target_rate_max = 10;
+    tmp->width = 100;
+}
+
+void init_Av_cfg_t(Av_cfg_t* tmp)
+{
+    tmp->denoise = 1;
+    tmp->chn = 1;
+    tmp->de_interlace = 10;
+    tmp->input_system = 2;
+    init_update_avbs_t(&tmp->ubs[0]);
+    init_update_avbs_t(&tmp->ubs[1]);
+}
+
+void init() {
+	init_Av_cfg_t(&g_stAv_0_file);
+	init_Av_cfg_t(&g_stAv_1_file);
+	init_Wf_search(&g_stWf_search_file);
+	getPCLocalIp(g_stNet_file.ip);
+}
 
 char *ParseVars(char PostIn[], int *pParseIndex) {
 	int out;
@@ -167,7 +224,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int ret = 0;
 	int file_changed_flag = 0;
 	void *p_tmp;
-	p_tmp = (void*)&g_stAv_0_file;
+	p_tmp = (void*) &g_stAv_0_file;
 	int channel = -1;
 	int sub_channel = 0;
 	int video_chn_num = 2;
@@ -237,24 +294,27 @@ int processMsg(void *buf, int len, void *rbuf) {
 				printf("set e_video_addr %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=rtsp://%s:%d", e_video_addr, g_stNet_file.ip, g_stPort_file.rtspport + channel * 2);
+				sprintf(cmd_tmp, "&%d=rtsp://%s:%d", e_video_addr,
+						g_stNet_file.ip, g_stPort_file.rtspport + channel * 2);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				printf("get e_video_addr rtsp://%s:%d\n", g_stNet_file.ip, g_stPort_file.rtspport + channel * 2);
+				printf("get e_video_addr rtsp://%s:%d\n", g_stNet_file.ip,
+						g_stPort_file.rtspport + channel * 2);
 			}
 			break;
 		case e_encode_profile:
-					if (cmd_type == T_Set) {
-						video_encode_profile = atoi(pValue);
-						printf("set e_encode_profile %d\n", video_encode_profile);
+			if (cmd_type == T_Set) {
+				video_encode_profile = atoi(pValue);
+				printf("set e_encode_profile %d\n", video_encode_profile);
 
-					} else if (cmd_type == T_Get) {
-						sprintf(cmd_tmp, "&%d=%d", e_encode_profile, video_encode_profile);
-						strcat(pRet, cmd_tmp);
-						ret++;
-						printf("get e_encode_profile %d\n", video_encode_profile);
-					}
-					break;
+			} else if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_encode_profile,
+						video_encode_profile);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				printf("get e_encode_profile %d\n", video_encode_profile);
+			}
+			break;
 		case e_video_chn_num:
 			if (cmd_type == T_Set) {
 				video_chn_num = atoi(pValue);
@@ -448,14 +508,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_bit_rate,
-						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate / 1000);
+						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
 				strcat(pRet, cmd_tmp);
 
 //				printf("=======to get bit_rate:%d.\n", ((Av_cfg_t *)p_tmp)->ubs[sub_channel].bit_rate/1000);
 
 				ret++;
 				printf("get bit_rate %d\n",
-						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate / 1000);
+						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
 			}
 			break;
 		case e_ip_interval:
@@ -909,7 +969,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 				printf("set e_backlightcomp_mode %d\n", backlightcompMode);
 
 			} else if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_mode, backlightcompMode);
+				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_mode,
+						backlightcompMode);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				printf("get e_backlightcomp_mode %d\n", backlightcompMode);
@@ -921,7 +982,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 				printf("set e_backlightcomp_level %d\n", backlightcompLevel);
 
 			} else if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_level, backlightcompLevel);
+				sprintf(cmd_tmp, "&%d=%d", e_backlightcomp_level,
+						backlightcompLevel);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				printf("get e_backlightcomp_level %d\n", backlightcompLevel);
@@ -2450,12 +2512,12 @@ int main(int argc, char *argv[]) {
 
 	pMsg_buf = (char *) malloc(MAX_CMD_LEN * sizeof(char));
 	if (NULL == pMsg_buf) {
-		return;
+		return 1;
 	}
 	pRet_buf = (char *) malloc(MAX_CMD_LEN * sizeof(char));
 	if (NULL == pRet_buf) {
 		free(pMsg_buf);
-		return;
+		return 1;
 	}
 
 	if (listen(server_fd, 1) < 0) {
