@@ -22,6 +22,9 @@
 
 #if 1
 #define ETH_NAME "eth0"
+#define HARDWARE_ID "caoyonghuaipc1"
+#define MANUFACTURE_ID "Bravilliant"
+#define MODEL_ID "ipc1"
 //int g_iFw;
 Av_cfg_t g_stAv_0_file;
 Av_cfg_t g_stAv_1_file;
@@ -2398,6 +2401,40 @@ int processMsg(void *buf, int len, void *rbuf) {
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_sys_swversion %s\n", g_stSyscfg_file.softVersion);
+			}
+			break;
+		case e_sys_hardwareId:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_sys_hardwareId,
+						HARDWARE_ID);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_sys_hardwareId %s\n", HARDWARE_ID);
+			}
+			break;
+		case e_sys_manufacturer:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_sys_manufacturer,
+						MANUFACTURE_ID);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_sys_manufacturer %s\n", MANUFACTURE_ID);
+			}
+			break;
+		case e_sys_Model:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_sys_Model, MODEL_ID);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_sys_Model %s\n", MODEL_ID);
+			}
+			break;
+		case e_sys_serialNumber:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_sys_serialNumber, g_stSyscfg_file.model);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_sys_serialNumber %s\n", g_stSyscfg_file.model);
 			}
 			break;
 		case e_sys_devname:
