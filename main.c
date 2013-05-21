@@ -160,8 +160,8 @@ void init_update_avbs_t(update_avbs_t* tmp)
     tmp->bit_rate = 2;
     tmp->enabled_roi = 1;
     tmp->enc_type = 0;
-    tmp->frame_rate = 10;
-    tmp->height = 100;
+    tmp->frame_rate = 30;
+    tmp->height = 720;
     tmp->init_quant = 20;
     tmp->ip_interval = 10;
     tmp->max_quant = tmp->mjpeg_quality = 20;
@@ -172,7 +172,7 @@ void init_update_avbs_t(update_avbs_t* tmp)
     tmp->roi_x = tmp->roi_y = 0;
     tmp->stream_enable = 1;
     tmp->target_rate_max = 10;
-    tmp->width = 100;
+    tmp->width = 1280;
 }
 
 void init_Av_cfg_t(Av_cfg_t* tmp)
@@ -322,8 +322,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 				logInfo("set e_video_addr %s\n", pValue);
 
 			} else if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=rtsp://%s:%d", e_video_addr,
-						g_stNet_file.ip, g_stPort_file.rtspport + channel * 2);
+				sprintf(cmd_tmp, "&%d=rtsp://%s:%d/day.264", e_video_addr,
+						g_stNet_file.ip, 8554);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_video_addr rtsp://%s:%d\n", g_stNet_file.ip,
