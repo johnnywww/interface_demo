@@ -243,7 +243,13 @@ enum{
 	//for onvif
 	e_reboot,
 	//==================
-
+	e_ptz_continue_move_default_timeout,
+	e_ptz_continue_move_vx,
+	e_ptz_continue_move_vy,
+	e_ptz_continue_move_vzoom,
+	e_ptz_continue_move_timeout,
+	e_ptz_stop_pt,
+	e_ptz_stop_zoom,
 	e_END
 };
 

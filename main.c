@@ -104,8 +104,8 @@ VidMask_cfg_t g_stVidMaskcfg_file = { 0, { { 0, 10, 10, 100, 100, 1 }, { 0, 100,
 Sys_cfg_t g_stSyscfg_file = { 0, "0", "1.0.0.0", "2.0.0.0", "ipcam",
 		"2012-4-25 00:00:00", 0, 0, 0, 0 };
 
-Time_cfg_t g_stTimecfg_file = { 56, //HK
-		0, 0, "192.168.1.2", 60 };
+Time_cfg_t g_stTimecfg_file = { 480, //HK
+		0, 0, "192.168.1.2", 60, "2011-03-14 04:05:06" };
 
 void getDateTimeStr(char* info, const int len, const time_t dtValue) {
 	struct tm* today = localtime(&dtValue);
@@ -242,6 +242,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	char *pKey;
 	int iKey;
 	int iValue;
+	float fValue;
 	char *pValue;
 	char *cmd_tmp;
 	char *pInput = buf;
@@ -303,7 +304,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			cmd_type = atoi(pValue);
 			sprintf(cmd_tmp, "$%d=%d", e_TYPE, cmd_type);
 			strcpy(pRet, cmd_tmp);
-			logInfo("cmd type is %d\n", cmd_type);
+			logInfo("cmd type is %d", cmd_type);
 			break;
 		case e_Chn:
 			channel = atoi(pValue);
@@ -2539,7 +2540,42 @@ int processMsg(void *buf, int len, void *rbuf) {
 				logInfo("set e_reset \n");
 			}
 			break;
-
+		case e_ptz_continue_move_vx:
+			if (cmd_type == T_Set) {
+				fValue = atof(pValue);
+				logInfo("set ptz continous move pan %f", fValue);
+			}
+			break;
+		case e_ptz_continue_move_vy:
+			if (cmd_type == T_Set) {
+				fValue = atof(pValue);
+				logInfo("set ptz continous move tilt %f", fValue);
+			}
+			break;
+		case e_ptz_continue_move_vzoom:
+			if (cmd_type == T_Set) {
+				fValue = atof(pValue);
+				logInfo("set ptz continous move zoom %f", fValue);
+			}
+			break;
+		case e_ptz_continue_move_timeout:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz stop timeout %d", iValue);
+			}
+			break;
+		case e_ptz_stop_pt:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz stop pan/tilt %d", iValue);
+			}
+			break;
+		case e_ptz_stop_zoom:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz stop zoom %d", iValue);
+			}
+			break;
 		default:
 			break;
 		}
