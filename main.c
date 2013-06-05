@@ -2564,6 +2564,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 				logInfo("set ptz stop timeout %d", iValue);
 			}
 			break;
+		case e_ptz_continue_move_default_timeout:
+			if (cmd_type == T_Get) {
+				iValue = 15;
+				sprintf(cmd_tmp, "&%d=%d", e_ptz_continue_move_default_timeout,
+								iValue);
+				logInfo("get ptz default timeout %d", iValue);
+			}
+			break;
 		case e_ptz_stop_pt:
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
