@@ -250,6 +250,11 @@ enum{
 	e_ptz_continue_move_timeout,
 	e_ptz_stop_pt,
 	e_ptz_stop_zoom,
+	e_ptz_presets_capacity,
+	e_ptz_allpresets,
+	e_ptz_preset,
+	e_ptz_goto_preset,
+	e_ptz_deletepreset,
 	e_END
 };
 

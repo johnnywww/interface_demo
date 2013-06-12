@@ -257,6 +257,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int channel = -1;
 	int sub_channel = 0;
 	int video_chn_num = 2;
+	int ptz_preset_capacity = 128;
 	int video_encode_profile = 0;
 	int witch_file = 0;
 	int osd_region = -1;
@@ -2582,6 +2583,44 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
 				logInfo("set ptz stop zoom %d", iValue);
+			}
+			break;
+		case e_ptz_presets_capacity:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_ptz_presets_capacity,
+						ptz_preset_capacity);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_ptz_presets_capacity %d\n",
+						ptz_preset_capacity);
+			}
+			break;
+		case e_ptz_allpresets:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_ptz_allpresets,
+						"1/64");
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_ptz_allpresets %s\n",
+						"1/64");
+			}
+			break;
+		case e_ptz_preset:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz preset %d", iValue);
+			}
+			break;
+		case e_ptz_goto_preset:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz goto preset %d", iValue);
+			}
+			break;
+		case e_ptz_deletepreset:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set ptz delete preset %d", iValue);
 			}
 			break;
 		default:
