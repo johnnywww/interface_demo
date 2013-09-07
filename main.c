@@ -25,6 +25,7 @@
 #define HARDWARE_ID "caoyonghuaipc1"
 #define MANUFACTURE_ID "Bravilliant"
 #define MODEL_ID "ipc1"
+#define PTZ_PRESET_RETURN_INDEX 23
 //int g_iFw;
 Av_cfg_t g_stAv_0_file;
 Av_cfg_t g_stAv_1_file;
@@ -107,6 +108,10 @@ Sys_cfg_t g_stSyscfg_file = { 0, "0", "1.0.0.0", "2.0.0.0", "ipcam",
 Time_cfg_t g_stTimecfg_file = { 480, //HK
 		0, 0, "192.168.1.2", 60, "2011-03-14 04:05:06" };
 
+
+int deletepresetindex = 0;
+
+
 void getDateTimeStr(char* info, const int len, const time_t dtValue) {
 	struct tm* today = localtime(&dtValue);
 	strftime(info, len, "%Y-%m-%d %H:%M:%S ", today);
@@ -115,7 +120,6 @@ void getDateTimeStr(char* info, const int len, const time_t dtValue) {
 void getCurrentDateTimeStr(char* info, const int len) {
 	getDateTimeStr(info, len, time(NULL));
 }
-
 
 void logIntoFile(FILE* file, char* level, const char* fmt, va_list argptr) {
 	char value[500] = { 0 };
@@ -146,43 +150,39 @@ int getPCLocalIp(char* pIp) {
 	strcpy(ifr.ifr_name, ETH_NAME);
 	if (ioctl(socket_fd, SIOCGIFADDR, &ifr) < 0) {
 		return -1;
-	}
-	else
-	{
-		sin = (struct sockaddr_in *)&(ifr.ifr_addr);
+	} else {
+		sin = (struct sockaddr_in *) &(ifr.ifr_addr);
 		strcpy(pIp, inet_ntoa(sin->sin_addr));
 	}
 	return 0;
 }
 
-void init_update_avbs_t(update_avbs_t* tmp)
-{
-    tmp->bit_rate = 2;
-    tmp->enabled_roi = 1;
-    tmp->enc_type = 0;
-    tmp->frame_rate = 30;
-    tmp->height = 720;
-    tmp->init_quant = 20;
-    tmp->ip_interval = 10;
-    tmp->max_quant = tmp->mjpeg_quality = 20;
-    tmp->min_quant = 10;
-    tmp->rate_ctl_type = 1;
-    tmp->reaction_delay_max = 20;
-    tmp->roi_h = tmp->roi_w = 100;
-    tmp->roi_x = tmp->roi_y = 0;
-    tmp->stream_enable = 1;
-    tmp->target_rate_max = 10;
-    tmp->width = 1280;
+void init_update_avbs_t(update_avbs_t* tmp) {
+	tmp->bit_rate = 2;
+	tmp->enabled_roi = 1;
+	tmp->enc_type = 0;
+	tmp->frame_rate = 30;
+	tmp->height = 720;
+	tmp->init_quant = 20;
+	tmp->ip_interval = 10;
+	tmp->max_quant = tmp->mjpeg_quality = 20;
+	tmp->min_quant = 10;
+	tmp->rate_ctl_type = 1;
+	tmp->reaction_delay_max = 20;
+	tmp->roi_h = tmp->roi_w = 100;
+	tmp->roi_x = tmp->roi_y = 0;
+	tmp->stream_enable = 1;
+	tmp->target_rate_max = 10;
+	tmp->width = 1280;
 }
 
-void init_Av_cfg_t(Av_cfg_t* tmp)
-{
-    tmp->denoise = 1;
-    tmp->chn = 1;
-    tmp->de_interlace = 10;
-    tmp->input_system = 2;
-    init_update_avbs_t(&tmp->ubs[0]);
-    init_update_avbs_t(&tmp->ubs[1]);
+void init_Av_cfg_t(Av_cfg_t* tmp) {
+	tmp->denoise = 1;
+	tmp->chn = 1;
+	tmp->de_interlace = 10;
+	tmp->input_system = 2;
+	init_update_avbs_t(&tmp->ubs[0]);
+	init_update_avbs_t(&tmp->ubs[1]);
 }
 
 void init() {
@@ -248,7 +248,6 @@ int processMsg(void *buf, int len, void *rbuf) {
 	char *pInput = buf;
 	int parseIndex = 0;
 	int i = 0;
-
 	char *pRet = rbuf;
 	int ret = 0;
 	int file_changed_flag = 0;
@@ -257,7 +256,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int channel = -1;
 	int sub_channel = 0;
 	int video_chn_num = 2;
-	int ptz_preset_capacity = 128;
+	int audio_chn_num = 1;
+	int audio_chn_no = 0;
+	int audio_enable = 1;
+	int audio_enc_type = 0; // g711
+	int audio_rtspport = 2345;
+	int audio_bitrate = 64000;
+	int audio_samplesize = 16;
+	int audio_samplerate = 8000;
 	int video_encode_profile = 0;
 	int witch_file = 0;
 	int osd_region = -1;
@@ -274,8 +280,9 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int if_cfg = 0;
 	int osd_cfg = 0;
 	int ntpserver_cfg = 0;
-
 	int fd_socket = -1;
+	int presetIndex = 1;
+	int ptz_preset_capacity = 9;
 
 	if (buf == NULL || rbuf == NULL) {
 		return -1;
@@ -538,14 +545,14 @@ int processMsg(void *buf, int len, void *rbuf) {
 
 			} else if (cmd_type == T_Get) {
 				sprintf(cmd_tmp, "&%d=%d", e_bit_rate,
-						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
+						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate);
 				strcat(pRet, cmd_tmp);
 
 //				logInfo("=======to get bit_rate:%d.\n", ((Av_cfg_t *)p_tmp)->ubs[sub_channel].bit_rate/1000);
 
 				ret++;
 				logInfo("get bit_rate %d\n",
-						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate );
+						((Av_cfg_t *) p_tmp)->ubs[sub_channel].bit_rate);
 			}
 			break;
 		case e_ip_interval:
@@ -1232,9 +1239,9 @@ int processMsg(void *buf, int len, void *rbuf) {
 			} else if (cmd_type == T_Get) {
 				//net_get_hwaddr("eth0", g_stNet_file.macaddr);
 
-				sprintf(cmd_tmp, "&%d=%02x-%02x-%02x-%02x-%02x-%02x",
+				sprintf(cmd_tmp, "&%d=%02X-%02X-%02X-%02X-%02X-%02X",
 						e_net_macaddr, g_stNet_file.macaddr[0],
-						g_stNet_file.macaddr[1], g_stNet_file.macaddr[2],
+						g_stNet_file.macaddr[1], g_stNet_file.macaddr[4],
 						g_stNet_file.macaddr[3], g_stNet_file.macaddr[4],
 						g_stNet_file.macaddr[5]);
 				strcat(pRet, cmd_tmp);
@@ -1303,7 +1310,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stDDNS_file.d3th_enable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_ddns_d3thenable %d\n", g_stDDNS_file.d3th_enable);
+				logInfo("get e_ddns_d3thenable %d\n",
+						g_stDDNS_file.d3th_enable);
 			}
 			break;
 		case e_ddns_d3thservice:
@@ -1341,7 +1349,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stDDNS_file.d3th_passwd);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_ddns_d3thpasswd %s\n", g_stDDNS_file.d3th_passwd);
+				logInfo("get e_ddns_d3thpasswd %s\n",
+						g_stDDNS_file.d3th_passwd);
 			}
 			break;
 		case e_ddns_domain:
@@ -1621,7 +1630,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stMdcfg_file.snap_switch);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_md_snap_switch %d\n", g_stMdcfg_file.snap_switch);
+				logInfo("get e_md_snap_switch %d\n",
+						g_stMdcfg_file.snap_switch);
 			}
 			break;
 		case e_md_record_switch:
@@ -2124,7 +2134,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSmtpcfg_file.logintype);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_smtp_logintype %d\n", g_stSmtpcfg_file.logintype);
+				logInfo("get e_smtp_logintype %d\n",
+						g_stSmtpcfg_file.logintype);
 			}
 			break;
 		case e_smtp_username:
@@ -2196,7 +2207,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stVidMaskcfg_file.aeraNum);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_vdmask_number %d\n", g_stVidMaskcfg_file.aeraNum);
+				logInfo("get e_vdmask_number %d\n",
+						g_stVidMaskcfg_file.aeraNum);
 			}
 			break;
 		case e_vdmask_NO:
@@ -2324,7 +2336,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stTimecfg_file.ntpenable);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_time_ntpenable %d\n", g_stTimecfg_file.ntpenable);
+				logInfo("get e_time_ntpenable %d\n",
+						g_stTimecfg_file.ntpenable);
 			}
 			break;
 		case e_time_ntpserver:
@@ -2336,7 +2349,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stTimecfg_file.ntpserver);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_time_ntpserver %s\n", g_stTimecfg_file.ntpserver);
+				logInfo("get e_time_ntpserver %s\n",
+						g_stTimecfg_file.ntpserver);
 			}
 			break;
 		case e_time_ntpinterval:
@@ -2393,7 +2407,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.hardVersion);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_sys_hdversion %s\n", g_stSyscfg_file.hardVersion);
+				logInfo("get e_sys_hdversion %s\n",
+						g_stSyscfg_file.hardVersion);
 			}
 			break;
 		case e_sys_swversion:
@@ -2402,13 +2417,13 @@ int processMsg(void *buf, int len, void *rbuf) {
 						g_stSyscfg_file.softVersion);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_sys_swversion %s\n", g_stSyscfg_file.softVersion);
+				logInfo("get e_sys_swversion %s\n",
+						g_stSyscfg_file.softVersion);
 			}
 			break;
 		case e_sys_hardwareId:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%s", e_sys_hardwareId,
-						HARDWARE_ID);
+				sprintf(cmd_tmp, "&%d=%s", e_sys_hardwareId, HARDWARE_ID);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_sys_hardwareId %s\n", HARDWARE_ID);
@@ -2416,8 +2431,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			break;
 		case e_sys_manufacturer:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%s", e_sys_manufacturer,
-						MANUFACTURE_ID);
+				sprintf(cmd_tmp, "&%d=%s", e_sys_manufacturer, MANUFACTURE_ID);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_sys_manufacturer %s\n", MANUFACTURE_ID);
@@ -2433,7 +2447,8 @@ int processMsg(void *buf, int len, void *rbuf) {
 			break;
 		case e_sys_serialNumber:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%s", e_sys_serialNumber, g_stSyscfg_file.model);
+				sprintf(cmd_tmp, "&%d=%s", e_sys_serialNumber,
+						g_stSyscfg_file.model);
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_sys_serialNumber %s\n", g_stSyscfg_file.model);
@@ -2569,7 +2584,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Get) {
 				iValue = 15;
 				sprintf(cmd_tmp, "&%d=%d", e_ptz_continue_move_default_timeout,
-								iValue);
+						iValue);
 				logInfo("get ptz default timeout %d", iValue);
 			}
 			break;
@@ -2587,40 +2602,167 @@ int processMsg(void *buf, int len, void *rbuf) {
 			break;
 		case e_ptz_presets_capacity:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%d", e_ptz_presets_capacity,
-						ptz_preset_capacity);
+				if (deletepresetindex != PTZ_PRESET_RETURN_INDEX) {
+					sprintf(cmd_tmp, "&%d=%d", e_ptz_presets_capacity,
+							ptz_preset_capacity);
+					logInfo("get e_ptz_presets_capacity %d\n",
+							ptz_preset_capacity);
+				} else {
+					sprintf(cmd_tmp, "&%d=%d", e_ptz_presets_capacity,
+							ptz_preset_capacity - 1);
+					logInfo("get e_ptz_presets_capacity %d\n",
+							ptz_preset_capacity - 1);
+				}
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_ptz_presets_capacity %d\n",
-						ptz_preset_capacity);
+
 			}
 			break;
 		case e_ptz_allpresets:
 			if (cmd_type == T_Get) {
-				sprintf(cmd_tmp, "&%d=%s", e_ptz_allpresets,
-						"1/64");
+				char dest1[500] = { 0 };
+				if (deletepresetindex != PTZ_PRESET_RETURN_INDEX) {
+					strcpy(
+							dest1,
+							"10/11/12/13/14/15/16/17/18/");
+				} else {
+					strcpy(
+							dest1,
+							"10/11/12/13/14/15/16/18/");
+				}
+				logInfo("get e_ptz_allpresets %s", dest1);
+				sprintf(cmd_tmp, "&%d=%s", e_ptz_allpresets, dest1);
 				strcat(pRet, cmd_tmp);
 				ret++;
-				logInfo("get e_ptz_allpresets %s\n",
-						"1/64");
+
 			}
 			break;
 		case e_ptz_preset:
 			if (cmd_type == T_Set) {
-				iValue = atoi(pValue);
-				logInfo("set ptz preset %d", iValue);
+				iValue = strtol(pValue, NULL, 10);
+				logInfo("set ptz preset received %d", iValue);
+				presetIndex = 1;
+				if (0 == iValue) {
+					presetIndex = PTZ_PRESET_RETURN_INDEX;
+				} else if ((presetIndex > 128) || (presetIndex < 95)) {
+					presetIndex = iValue;
+				} else
+					presetIndex = 0;
+				sprintf(cmd_tmp, "&%d=%d", e_ptz_preset, presetIndex);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("set ptz preset return %d", presetIndex);
+				if (presetIndex == deletepresetindex) {
+					deletepresetindex = 0;
+				}
+			} else {
+				iValue = strtol(pValue, NULL, 10);
+				logInfo("get ptz preset received %d", iValue);
+				presetIndex = iValue;
+				sprintf(cmd_tmp, "&%d=%d", e_ptz_preset, presetIndex);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_ptz_preset %d", presetIndex);
+			}
+			break;
+		case e_ptz_presetname:
+			if (cmd_type == T_Set) {
+				logInfo("set ptz preset name %s", pValue);
+				sprintf(cmd_tmp, "&%d=%s", e_ptz_presetname, pValue);
+				strcat(pRet, cmd_tmp);
+				ret++;
+			} else {
+				if (presetIndex != PTZ_PRESET_RETURN_INDEX) {
+					sprintf(cmd_tmp, "&%d=MyPreset%d", e_ptz_presetname,
+							presetIndex);
+					logInfo("get e_ptz_presetname MyPreset%d", presetIndex);
+				} else {
+					sprintf(cmd_tmp, "&%d=Test", e_ptz_presetname);
+					logInfo("get e_ptz_presetname Test");
+				}
+				strcat(pRet, cmd_tmp);
+				ret++;
+
 			}
 			break;
 		case e_ptz_goto_preset:
 			if (cmd_type == T_Set) {
-				iValue = atoi(pValue);
+				iValue = strtol(pValue, NULL, 10);
 				logInfo("set ptz goto preset %d", iValue);
+				if (deletepresetindex != iValue) {
+					sprintf(cmd_tmp, "&%d=%d", e_ptz_goto_preset, iValue);
+				} else {
+					sprintf(cmd_tmp, "&%d=%d&%d=%d", e_ptz_goto_preset, iValue,
+							e_error, ERROR_PTZ_INDEX_NOT_EXIST);
+				}
+				strcat(pRet, cmd_tmp);
+				ret++;
 			}
 			break;
 		case e_ptz_deletepreset:
 			if (cmd_type == T_Set) {
-				iValue = atoi(pValue);
+				iValue = strtol(pValue, NULL, 10);
 				logInfo("set ptz delete preset %d", iValue);
+				deletepresetindex = iValue;
+				sprintf(cmd_tmp, "&%d=%d", e_ptz_deletepreset, iValue);
+				strcat(pRet, cmd_tmp);
+				ret++;
+			}
+			break;
+		case e_audio_enable:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_enable, audio_enable);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_enable %d\n", audio_enable);
+			}
+			break;
+		case e_audio_enc_type:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_enc_type, audio_enc_type);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_enc_type %d\n", audio_enc_type);
+			}
+			break;
+		case e_audio_bitrate:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_bitrate, audio_bitrate);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_bitrate %d\n", audio_bitrate);
+			}
+			break;
+		case e_audio_samplesize:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_samplesize,
+						audio_samplesize);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_samplesize %d\n", audio_samplesize);
+			}
+			break;
+		case e_audio_samplerate:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_samplerate,
+						audio_samplerate);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_samplerate %d\n", audio_samplerate);
+			}
+			break;
+		case e_audio_rtspport:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_audio_rtspport, audio_rtspport);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_audio_rtspport %d\n", audio_rtspport);
+			}
+			break;
+		case e_video_SynchronizationPoint:
+			if (cmd_type == T_Set) {
+				iValue = atoi(pValue);
+				logInfo("set e_video_SynchronizationPoint %d\n", iValue);
 			}
 			break;
 		default:

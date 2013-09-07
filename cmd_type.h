@@ -16,6 +16,14 @@
 #define RESULT_OK 0 //成功
 #define RESULT_ERROR 1 //普通错误
 #define RESULT_OTHER 2 //其他错误
+
+//PTZ error NO
+#define ERROR_PTZ_INDEX_NOT_EXIST	40	//preset index not exist
+#define ERROR_PTZ_INDEX_OUT_RANGE	41	//preset index out range
+#define ERROR_PTZ_PRESETNAME_NOT_EXIST	42	//presetname not exist
+#define ERROR_PTZ_INDEX_OVER	43  // preset overload
+#define ERROR_PTZ_PRESETNAME_EMPTY	44
+#define ERROR_PTZ_PRESETNAME_REPEAT	45
 //......................各错误说明
 
 #define ADD_USER	0
@@ -29,11 +37,11 @@ enum{
 	e_Chn,
 	e_Sub_Chn,
 	//======for onvif==========
-	e_video_chn_num,
-	e_audio_enable,
+	e_video_chn_num,	
 	e_video_addr,
-
+	
 	e_encode_profile,//for h264 profile level
+	e_video_SynchronizationPoint, //insert I frame
 	//=========================
 	
 	e_FW,
@@ -79,14 +87,14 @@ enum{
 	e_wb_mode,
 	e_wb_crgain,
 	e_wb_cbgain,
-
+	
 	e_backlightcomp_mode, //0 is off 1 is on
-  e_backlightcomp_level,
-
+	e_backlightcomp_level, 
+	
 	e_wdrange_mode,  // 0 is off 1 is on
-  e_wdrange_level,
+	e_wdrange_level,
 	//=============================
-
+	
 	//Osd_cfg_t
 	e_osd_region,
 	e_osd_enable,
@@ -107,10 +115,10 @@ enum{
 	e_net_sdnsip,
 	e_net_macaddr,
 	e_net_nettype,
-	//for onvif
+	//==============for onvif=========
 	e_net_cardname,
 	e_net_protocols,
-	//=============
+	//================================
 
 	//Port_cfg_t
 	e_port_httpport,
@@ -225,12 +233,12 @@ enum{
 	e_sys_sdstatus,
 	e_sys_sdfreespace,
 	e_sys_sdtotalspace,
-	//for onvif
+	//==========for onvif============
 	e_sys_hardwareId,
 	e_sys_manufacturer,
 	e_sys_Model,
 	e_sys_serialNumber,
-	//=================
+	//===============================
 
 	//to NVR
 	e_nvr_opt,	//1:开始获取视频数据 0：停止视频数据
@@ -243,6 +251,10 @@ enum{
 	//for onvif
 	e_reboot,
 	//==================
+	
+	e_mctp_ptzstring,
+
+	//========for onvif ptz control==================
 	e_ptz_continue_move_default_timeout,
 	e_ptz_continue_move_vx,
 	e_ptz_continue_move_vy,
@@ -250,56 +262,34 @@ enum{
 	e_ptz_continue_move_timeout,
 	e_ptz_stop_pt,
 	e_ptz_stop_zoom,
-	e_ptz_presets_capacity,
-	e_ptz_allpresets,
-	e_ptz_preset,
-	e_ptz_goto_preset,
-	e_ptz_deletepreset,
+	
+	e_ptz_goto_preset,//进入预置点位置
+	e_ptz_preset,//设置预置点
+	e_ptz_presetname,//预置位名称 最大32字节
+	e_ptz_deletepreset,//
+	e_ptz_allpresets,//得到所有预置点索引
+	e_ptz_presets_capacity,//系统支持预置点个数
+	//======================================
+
+	//=============for onvif audio======================
+	e_audio_enable,//（音频通道使能）
+	e_audio_enc_type,//(音频类型）
+	e_audio_bitrate,//(音频Bitrate)
+	e_audio_rtspport,//(音频rtspport)
+//	e_audio_chn_num,// (音频通道总数）
+//	e_audio_Chn,//（音频通道号）
+	e_audio_samplesize,
+	e_audio_samplerate,
+	//===================================================
+
+	e_sys_protocol,
+
+	e_error,
+	
 	e_END
 };
 
 //==========================================================================
-#define TO_NVR_MEM_KEY0	0x12340000
-#define TO_NVR_MEM_KEY1 0x12340101
-#define TO_NVR_MEM_KEY2	0x12340202
-#define TO_NVR_MEM_KEY3 0x12340303
-#define TO_NVR_MEM_KEY4	0x12340404
-#define TO_NVR_MEM_KEY5 0x12340505
-#define TO_NVR_MEM_KEY6	0x12340606
-#define TO_NVR_MEM_KEY7 0x12340707
-#define TO_NVR_MEM_KEY8	0x12340808
-#define TO_NVR_MEM_KEY9	0x12340909
-#define TO_NVR_MEM_KEYA	0x12340a0a
-#define TO_NVR_MEM_KEYB	0x12340b0b
-#define TO_NVR_MEM_KEYC		0x12340c0c
-#define TO_NVR_MEM_KEYD		0x12340d0d
-#define TO_NVR_MEM_KEYE		0x12340e0e
-#define TO_NVR_MEM_KEYF		0x12340f0f
-#define TO_NVR_MEM_KEY10	0x12341010
-#define TO_NVR_MEM_KEY11 	0x12341111
-#define TO_NVR_MEM_KEY12	0x12341212
-#define TO_NVR_MEM_KEY13 	0x12341313
-
-#define TO_NVR_SEM_KEY0	0x23450000
-#define TO_NVR_SEM_KEY1	0x23450101
-#define TO_NVR_SEM_KEY2	0x23450202
-#define TO_NVR_SEM_KEY3	0x23450303
-#define TO_NVR_SEM_KEY4	0x23450404
-#define TO_NVR_SEM_KEY5	0x23450505
-#define TO_NVR_SEM_KEY6	0x23450606
-#define TO_NVR_SEM_KEY7	0x23450707
-#define TO_NVR_SEM_KEY8	0x23450808
-#define TO_NVR_SEM_KEY9	0x23450909
-#define TO_NVR_SEM_KEYA	0x23450a0a
-#define TO_NVR_SEM_KEYB	0x23450b0b
-#define TO_NVR_SEM_KEYC		0x23450c0c
-#define TO_NVR_SEM_KEYD		0x23450d0d
-#define TO_NVR_SEM_KEYE		0x23450e0e
-#define TO_NVR_SEM_KEYF		0x23450f0f
-#define TO_NVR_SEM_KEY10	0x23451010
-#define TO_NVR_SEM_KEY11	0x23451111
-#define TO_NVR_SEM_KEY12	0x23451212
-#define TO_NVR_SEM_KEY13	0x23451313
 
 typedef struct _tagKey{
 	int mem_key;
