@@ -21,7 +21,7 @@
 #define ERROR_PTZ_INDEX_NOT_EXIST	40	//preset index not exist
 #define ERROR_PTZ_INDEX_OUT_RANGE	41	//preset index out range
 #define ERROR_PTZ_PRESETNAME_NOT_EXIST	42	//presetname not exist
-#define ERROR_PTZ_INDEX_OVER	43  // preset overload
+#define ERROR_PTZ_INDEX_OVER	43
 #define ERROR_PTZ_PRESETNAME_EMPTY	44
 #define ERROR_PTZ_PRESETNAME_REPEAT	45
 //......................¸÷´íÎóËµÃ÷
@@ -40,7 +40,8 @@ enum{
 	e_video_chn_num,	
 	e_video_addr,
 	
-	e_encode_profile,//for h264 profile level
+	e_encode_profile,//for h264 profile level 0:H264
+	e_profile_levels,//bit0:baseline bit1:main profile bit2:high profile
 	e_video_SynchronizationPoint, //insert I frame
 	//=========================
 	
@@ -51,10 +52,23 @@ enum{
 	e_Stream_enable,
 	e_enc_type,
 	e_frame_rate,
+	//===============for onvif=================
+	e_min_frame_rate,
+	e_max_frame_rate,
+	//=========================================
 	e_bit_rate,
 	e_ip_interval,
+	//===============for onvif=================
+	e_min_ip_interval,
+	e_max_ip_interval,
+	//=========================================
 	e_width,
 	e_height,
+	//===============for onvif=================
+	e_videoResolutions,//chn0:1920,1072/1280,720 chn1:352*288
+	e_min_videoEncodingInterval,
+	e_max_videoEncodingInterval,
+	//=========================================
 	e_rate_ctl_type,
 	e_target_rate_max,
 	e_reaction_delay_max,

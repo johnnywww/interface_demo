@@ -258,7 +258,7 @@ int processMsg(void *buf, int len, void *rbuf) {
 	int video_chn_num = 2;
 	int audio_chn_num = 1;
 	int audio_chn_no = 0;
-	int audio_enable = 1;
+	int audio_enable = 0;
 	int audio_enc_type = 0; // g711
 	int audio_rtspport = 2345;
 	int audio_bitrate = 64000;
@@ -2763,6 +2763,70 @@ int processMsg(void *buf, int len, void *rbuf) {
 			if (cmd_type == T_Set) {
 				iValue = atoi(pValue);
 				logInfo("set e_video_SynchronizationPoint %d\n", iValue);
+			}
+			break;
+		case e_videoResolutions:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=1280,720/352,288", e_videoResolutions);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_videoResolutions 1280,720/352,288\n");
+			}
+			break;
+		case e_min_ip_interval:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_min_ip_interval, 5);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_min_ip_interval 5\n");
+			}
+			break;
+		case e_max_ip_interval:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_max_ip_interval, 50);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_max_ip_interval 50\n");
+			}
+			break;
+		case e_min_frame_rate:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_min_frame_rate, 1);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_min_frame_rate 1\n");
+			}
+			break;
+		case e_max_frame_rate:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_max_frame_rate, 30);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_max_frame_rate 30\n");
+			}
+			break;
+		case e_min_videoEncodingInterval:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_min_videoEncodingInterval, 1);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_min_videoEncodingInterval 1\n");
+			}
+			break;
+		case e_max_videoEncodingInterval:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_max_videoEncodingInterval, 120);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_max_videoEncodingInterval 120\n");
+			}
+			break;
+		case e_profile_levels:
+			if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%d", e_profile_levels, 3);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_profile_levels 3\n");
 			}
 			break;
 		default:
