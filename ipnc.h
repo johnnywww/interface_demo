@@ -425,6 +425,7 @@ typedef struct _tagTime_cfg{
         char		ntpserver[32];	//NTP
         int			ntpinterval;	//ͬʱ
         char		sys_time[32];	//ϵͳʱ
+        char		utc_sys_time[32];	//utcϵͳʱ
 }Time_cfg_t;
 
 

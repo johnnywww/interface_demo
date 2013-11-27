@@ -105,8 +105,8 @@ VidMask_cfg_t g_stVidMaskcfg_file = { 0, { { 0, 10, 10, 100, 100, 1 }, { 0, 100,
 Sys_cfg_t g_stSyscfg_file = { 0, "0", "1.0.0.0", "2.0.0.0", "ipcam",
 		"2012-4-25 00:00:00", 0, 0, 0, 0 };
 
-Time_cfg_t g_stTimecfg_file = { 480, //HK
-		0, 0, "192.168.1.2", 60, "2011-03-14 04:05:06" };
+Time_cfg_t g_stTimecfg_file = { 8, //HK
+		0, 0, "192.168.1.2", 60, "2011-03-14 13:05:06", "2011-03-14 05:05:06" };
 
 
 int deletepresetindex = 0;
@@ -2377,6 +2377,18 @@ int processMsg(void *buf, int len, void *rbuf) {
 				strcat(pRet, cmd_tmp);
 				ret++;
 				logInfo("get e_time_systime %s\n", g_stTimecfg_file.sys_time);
+			}
+			break;
+		case e_time_utc_systime:
+			if (cmd_type == T_Set) {
+				logInfo("set e_time_utc_systime %s\n", pValue);
+
+			} else if (cmd_type == T_Get) {
+				sprintf(cmd_tmp, "&%d=%s", e_time_utc_systime,
+						g_stTimecfg_file.utc_sys_time);
+				strcat(pRet, cmd_tmp);
+				ret++;
+				logInfo("get e_time_utc_systime %s\n", g_stTimecfg_file.utc_sys_time);
 			}
 			break;
 		case e_sys_devtype:

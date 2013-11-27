@@ -4,7 +4,7 @@
 
 //================================================================
 #define MAX_CMD_LEN		512
-
+#define MSG_LENGTH MAX_CMD_LEN
 #define T_Get	0
 #define T_Set	1
 #define T_Result 2
@@ -40,7 +40,7 @@ enum{
 	e_video_chn_num,	
 	e_video_addr,
 	
-	e_encode_profile,//for h264 profile level 0:H264
+	e_encode_profile,//for h264 profile level 0:H264 baseline
 	e_profile_levels,//bit0:baseline bit1:main profile bit2:high profile
 	e_video_SynchronizationPoint, //insert I frame
 	//=========================
@@ -61,14 +61,14 @@ enum{
 	//===============for onvif=================
 	e_min_ip_interval,
 	e_max_ip_interval,
-	//=========================================
+	//=========================================	
 	e_width,
 	e_height,
 	//===============for onvif=================
 	e_videoResolutions,//chn0:1920,1072/1280,720 chn1:352*288
 	e_min_videoEncodingInterval,
 	e_max_videoEncodingInterval,
-	//=========================================
+	//=========================================	
 	e_rate_ctl_type,
 	e_target_rate_max,
 	e_reaction_delay_max,
@@ -236,6 +236,7 @@ enum{
 	e_time_ntpserver,
 	e_time_ntpinterval,
 	e_time_systime,
+	e_time_utc_systime,
 	//Sys_cfg_t
 	e_sys_devtype,
 	e_sys_model,
